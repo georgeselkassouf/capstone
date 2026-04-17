@@ -55,7 +55,7 @@ st.markdown("""
         color: #0f2847 !important;
     }
 
-    /* Page titles */
+    /* Typography */
     h1 {
         color: #0f2847 !important;
         font-weight: 800 !important;
@@ -72,7 +72,7 @@ st.markdown("""
         overflow: hidden;
     }
 
-    /* Download button */
+    /* Buttons */
     .stDownloadButton button {
         background: #0f2847 !important;
         color: white !important;
@@ -85,18 +85,34 @@ st.markdown("""
         background: #1a4a7a !important;
     }
 
-    /* Hide streamlit branding */
+    /* Selectbox labels */
+    .stSelectbox label, .stTextInput label {
+        font-weight: 600;
+        color: #1a3a5c;
+    }
+
+    /* Hide branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 DATA = Path("data")
-GCC_COLORS = {
-    "Bahrain": "#1B9AAA", "Kuwait": "#06D6A0", "Oman": "#EF476F",
-    "Qatar": "#8338EC", "Saudi Arabia": "#0F4C75", "United Arab Emirates": "#FF6B35",
-}
 TRANSPORT_ICONS = {"Sea": "🚢", "Air": "✈️", "Land": "🚛"}
+
+# Shared chart palette
+BLUE_SCALE = [[0, "#c8d6e5"], [0.5, "#2e86de"], [1, "#0a3d62"]]
+TEAL_SCALE = [[0, "#c8e6e5"], [0.5, "#1B9AAA"], [1, "#0d5c63"]]
+ORANGE_SCALE = [[0, "#fde8d0"], [0.5, "#FF6B35"], [1, "#c4420a"]]
+PURPLE_SCALE = [[0, "#e0d4f5"], [0.5, "#8338EC"], [1, "#4a1d8e"]]
+RED_SCALE = [[0, "#f5d4d4"], [0.5, "#D62828"], [1, "#8b1a1a"]]
+
+CHART_LAYOUT = dict(
+    plot_bgcolor="rgba(0,0,0,0)",
+    paper_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="system-ui, -apple-system, sans-serif"),
+)
+
 
 # ---------------------------------------------------------------------------
 # HELPERS
@@ -111,11 +127,9 @@ def require(*names):
     frames = {}
     missing = []
     for n in names:
-        df = load(n)
-        if df is None:
+        frames[n] = load(n)
+        if frames[n] is None:
             missing.append(n)
-        frames[n] = df
-    missing = [n for n in names if frames.get(n) is None]
     if missing:
         st.error(f"Missing: **{', '.join(missing)}**. Place CSVs from notebook Section 45 into `data/`.")
         st.stop()
@@ -129,6 +143,70 @@ def fmt_usd(val, d=1):
         if abs(val) >= t:
             return f"${val/t:.{d}f}{s}"
     return f"${val:,.0f}"
+
+
+def hbar(labels, values, colorscale=BLUE_SCALE, text_fmt=None, height=None, x_title=""):
+    """Polished horizontal bar chart matching the Opportunity Finder style."""
+    if text_fmt is None:
+        text_fmt = [f"{v:.3f}" for v in values]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        y=labels, x=values, orientation="h",
+        marker=dict(color=values, colorscale=colorscale, line=dict(width=0), cornerradius=4),
+        text=text_fmt, textposition="outside",
+        textfont=dict(size=11, color="#1a3a5c"),
+        hovertemplate="<b>%{y}</b><br>%{x:,.2f}<extra></extra>",
+    ))
+    h = height or max(350, len(labels) * 34)
+    fig.update_layout(
+        **CHART_LAYOUT,
+        margin=dict(t=10, b=30, l=10, r=70), height=h,
+        yaxis=dict(autorange="reversed", tickfont=dict(size=12)),
+        xaxis=dict(title=x_title, range=[0, max(values) * 1.2] if len(values) > 0 else None),
+    )
+    fig.update_yaxes(showgrid=False)
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
+    return fig
+
+
+def area_chart(x, y, color="#0F4C75", y_label="", height=300):
+    """Polished area chart."""
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=x, y=y, mode="lines", fill="tozeroy",
+        line=dict(color=color, width=2.5),
+        fillcolor=color.replace(")", ",0.12)").replace("rgb", "rgba") if "rgb" in color
+                  else f"rgba({int(color[1:3],16)},{int(color[3:5],16)},{int(color[5:7],16)},0.12)",
+        hovertemplate="%{x}<br>" + y_label + ": %{y:,.2f}<extra></extra>",
+    ))
+    fig.update_layout(
+        **CHART_LAYOUT,
+        margin=dict(t=10, b=30, l=10, r=10), height=height,
+        yaxis=dict(title=y_label, gridcolor="rgba(0,0,0,0.05)"),
+        xaxis=dict(title="", gridcolor="rgba(0,0,0,0.05)"),
+        showlegend=False,
+    )
+    return fig
+
+
+def line_chart(x, y, color="#0F4C75", y_label="", title="", height=320):
+    """Polished line chart with markers."""
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=x, y=y, mode="lines+markers",
+        line=dict(color=color, width=2.5),
+        marker=dict(size=7, color=color, line=dict(color="white", width=1.5)),
+        hovertemplate="%{x}<br>" + y_label + ": %{y:,.2f}<extra></extra>",
+    ))
+    fig.update_layout(
+        **CHART_LAYOUT,
+        margin=dict(t=40 if title else 10, b=30, l=10, r=10), height=height,
+        title=dict(text=title, font=dict(size=14, color="#1a3a5c")) if title else None,
+        yaxis=dict(title=y_label, gridcolor="rgba(0,0,0,0.05)"),
+        xaxis=dict(title="", gridcolor="rgba(0,0,0,0.05)"),
+        showlegend=False,
+    )
+    return fig
 
 
 @st.cache_data
@@ -202,45 +280,36 @@ if page == "Opportunity Finder":
 
     opp = require("opportunity_rankings_full.csv")
 
-    # --- SELECTORS ---
     col_gcc, col_search = st.columns([1, 2])
     with col_gcc:
         gcc_sel = st.selectbox("GCC Exporter", sorted(opp["gcc_country"].unique()))
 
     df_gcc = opp[opp["gcc_country"] == gcc_sel].copy()
-
-    # Commodity list for this GCC country
     cmd_scores = (
         df_gcc.groupby(["cmdCode", "commodity"])["opportunity_score"]
         .mean().reset_index().sort_values("opportunity_score", ascending=False)
     )
-    cmd_labels = cmd_scores.apply(
-        lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1
-    ).tolist()
+    cmd_labels = cmd_scores.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     cmd_code_map = dict(zip(cmd_labels, cmd_scores["cmdCode"]))
 
     with col_search:
         search = st.text_input("🔍 Filter commodities", "", placeholder="e.g. plastic, aluminium, dairy...")
-
     if search.strip():
         cmd_labels = [l for l in cmd_labels if search.strip().lower() in l.lower()]
-
     if not cmd_labels:
         st.warning("No commodities match your search.")
         st.stop()
 
     cmd_sel = st.selectbox("Commodity", cmd_labels)
     sel_code = cmd_code_map[cmd_sel]
-
     df = df_gcc[df_gcc["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
-
     if df.empty:
         st.info("No scored opportunities for this combination.")
         st.stop()
 
     commodity_name = df["commodity"].iloc[0]
 
-    # --- KPI ROW ---
+    # KPIs
     st.divider()
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Markets Ranked", f"{df['dest_country'].nunique()}")
@@ -250,120 +319,66 @@ if page == "Opportunity Finder":
     if "demand_4y_total" in df.columns:
         k4.metric("4-Year Demand (Total)", fmt_usd(df["demand_4y_total"].sum()))
 
-    # --- TOP 15 BAR CHART ---
+    # Top 15 bar chart
     st.divider()
     st.subheader(f"Top 15 Destinations — {commodity_name[:55]}")
     st.caption(f"Exporter: **{gcc_sel}** · Re-exports & saturated markets excluded")
-
-    df_top = df.head(15).copy()
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        y=df_top["dest_country"],
-        x=df_top["opportunity_score"],
-        orientation="h",
-        marker=dict(
-            color=df_top["opportunity_score"],
-            colorscale=[[0, "#c8d6e5"], [0.5, "#2e86de"], [1, "#0a3d62"]],
-            line=dict(width=0),
-            cornerradius=4,
-        ),
-        text=df_top["opportunity_score"].round(3),
-        textposition="outside",
-        textfont=dict(size=12, color="#1a3a5c"),
-        hovertemplate=(
-            "<b>%{y}</b><br>"
-            "Score: %{x:.3f}<br>"
-            "<extra></extra>"
-        ),
-    ))
-    fig.update_layout(
-        margin=dict(t=10, b=30, l=10, r=60),
-        height=max(380, len(df_top) * 36),
-        yaxis=dict(autorange="reversed", tickfont=dict(size=13)),
-        xaxis=dict(title="Opportunity Score", range=[0, df_top["opportunity_score"].max() * 1.18]),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
+    df_top = df.head(15)
+    fig = hbar(
+        df_top["dest_country"], df_top["opportunity_score"],
+        colorscale=BLUE_SCALE,
+        text_fmt=[f"{v:.3f}" for v in df_top["opportunity_score"]],
+        x_title="Opportunity Score",
     )
-    fig.update_yaxes(showgrid=False)
-    fig.update_xaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- DETAIL TABLE ---
+    # Detail table
     st.divider()
     st.subheader("Detailed Breakdown")
-
     col_map = {
-        "dest_country": "Target Market",
-        "opportunity_score": "Score",
-        "grade": "Grade",
-        "demand_4y_total": "4Y Demand",
-        "penetration_pct": "GCC Pen %",
-        "pen_opportunity": "Entry Room",
-        "uv_mean": "UV ($/kg)",
-        "uv_cagr": "Price CAGR %",
-        "ml_growth_prob": "ML Growth P",
-        "dist_km": "Distance (km)",
-        "lpi_score": "LPI",
-        "mfn_tariff_rate": "Tariff %",
-        "recommended_transport": "Transport",
-        "opportunity_rationale": "Rationale",
+        "dest_country": "Target Market", "opportunity_score": "Score", "grade": "Grade",
+        "demand_4y_total": "4Y Demand", "penetration_pct": "GCC Pen %",
+        "pen_opportunity": "Entry Room", "uv_mean": "UV ($/kg)", "uv_cagr": "Price CAGR %",
+        "ml_growth_prob": "ML Growth P", "dist_km": "Distance (km)",
+        "lpi_score": "LPI", "mfn_tariff_rate": "Tariff %",
+        "recommended_transport": "Transport", "opportunity_rationale": "Rationale",
     }
     avail = {k: v for k, v in col_map.items() if k in df_top.columns}
     table = df_top[list(avail.keys())].rename(columns=avail).copy()
-
     if "4Y Demand" in table.columns:
         table["4Y Demand"] = table["4Y Demand"].apply(lambda x: fmt_usd(x) if pd.notna(x) else "—")
-    if "Score" in table.columns:
-        table["Score"] = table["Score"].round(3)
-    if "GCC Pen %" in table.columns:
-        table["GCC Pen %"] = table["GCC Pen %"].round(1)
-    if "Entry Room" in table.columns:
-        table["Entry Room"] = table["Entry Room"].round(2)
-    if "UV ($/kg)" in table.columns:
-        table["UV ($/kg)"] = table["UV ($/kg)"].round(2)
-    if "Price CAGR %" in table.columns:
-        table["Price CAGR %"] = table["Price CAGR %"].round(1)
-    if "ML Growth P" in table.columns:
-        table["ML Growth P"] = table["ML Growth P"].round(2)
+    for c, r in [("Score", 3), ("GCC Pen %", 1), ("Entry Room", 2), ("UV ($/kg)", 2),
+                  ("Price CAGR %", 1), ("ML Growth P", 2), ("LPI", 2), ("Tariff %", 1)]:
+        if c in table.columns:
+            table[c] = table[c].round(r)
     if "Distance (km)" in table.columns:
-        table["Distance (km)"] = table["Distance (km)"].apply(
-            lambda x: f"{x:,.0f}" if pd.notna(x) else "—")
-    if "LPI" in table.columns:
-        table["LPI"] = table["LPI"].round(2)
-    if "Tariff %" in table.columns:
-        table["Tariff %"] = table["Tariff %"].round(1)
+        table["Distance (km)"] = table["Distance (km)"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "—")
     if "Transport" in table.columns:
         table["Transport"] = table["Transport"].apply(
             lambda x: f"{TRANSPORT_ICONS.get(str(x), '')} {x}" if pd.notna(x) else "—")
     if "Rationale" in table.columns:
         table["Rationale"] = table["Rationale"].str[:90]
+    st.dataframe(table, use_container_width=True, hide_index=True, height=min(620, len(df_top) * 42 + 50))
 
-    st.dataframe(table, use_container_width=True, hide_index=True,
-                 height=min(620, len(df_top) * 42 + 50))
-
-    # --- RATIONALE EXPANDER ---
+    # Rationale expander
     if "opportunity_rationale" in df_top.columns:
         with st.expander("📋 Full scoring rationale for each market"):
             for _, row in df_top.iterrows():
                 transport = row.get("recommended_transport", "")
                 icon = TRANSPORT_ICONS.get(str(transport), "")
                 st.markdown(
-                    f"**{row['dest_country']}** · "
-                    f"Score **{row['opportunity_score']:.3f}** · "
-                    f"Grade {row.get('grade', '—')} · {icon} {transport}"
-                )
+                    f"**{row['dest_country']}** · Score **{row['opportunity_score']:.3f}** · "
+                    f"Grade {row.get('grade', '—')} · {icon} {transport}")
                 st.caption(row.get("opportunity_rationale", "—"))
                 st.markdown("---")
 
-    # --- DOWNLOAD ---
+    # Download
     st.divider()
-    dl_cols = [c for c in list(col_map.keys()) if c in df.columns]
+    dl_cols = [c for c in col_map if c in df.columns]
     st.download_button(
         "⬇️ Download full results as CSV",
         df[dl_cols].to_csv(index=False).encode("utf-8"),
-        f"opportunities_{gcc_sel.replace(' ', '_')}_{sel_code}.csv",
-        "text/csv",
+        f"opportunities_{gcc_sel.replace(' ', '_')}_{sel_code}.csv", "text/csv",
     )
 
 
@@ -400,28 +415,26 @@ elif page == "Executive Summary":
     display["Score"] = display["Score"].round(3)
     st.dataframe(display, use_container_width=True, hide_index=True)
 
+    # Trend charts
     st.divider()
     col_l, col_r = st.columns(2)
     if yearly is not None:
         with col_l:
             st.subheader("Import Demand — 40 Destinations")
             yearly["d_B"] = yearly["total_demand"] / 1e9
-            fig = px.area(yearly, x="year", y="d_B",
-                          labels={"d_B": "USD (Billions)", "year": ""},
-                          color_discrete_sequence=["#0F4C75"])
-            fig.update_layout(margin=dict(t=10, b=30), height=300, showlegend=False,
-                              plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(
+                area_chart(yearly["year"], yearly["d_B"], "#0F4C75", "USD (Billions)"),
+                use_container_width=True,
+            )
         with col_r:
             st.subheader("GCC Non-Fuel Exports")
             yearly["g_B"] = yearly["total_gcc_exports"] / 1e9
-            fig2 = px.area(yearly, x="year", y="g_B",
-                           labels={"g_B": "USD (Billions)", "year": ""},
-                           color_discrete_sequence=["#FF6B35"])
-            fig2.update_layout(margin=dict(t=10, b=30), height=300, showlegend=False,
-                               plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(
+                area_chart(yearly["year"], yearly["g_B"], "#FF6B35", "USD (Billions)"),
+                use_container_width=True,
+            )
 
+    # Model reliability
     if bm:
         st.divider()
         c1, c2, c3 = st.columns(3)
@@ -439,17 +452,26 @@ elif page == "Market Demand":
 
     pen = require("gcc_export_penetration.csv")
 
+    # Yearly trend
     yearly = pen.groupby("year")["world_demand"].sum().reset_index()
     yearly["d_B"] = yearly["world_demand"] / 1e9
 
     st.subheader("Total Addressable Import Demand Over Time")
-    fig = px.bar(yearly, x="year", y="d_B",
-                 labels={"d_B": "USD (Billions)", "year": ""},
-                 color_discrete_sequence=["#0F4C75"])
-    fig.update_layout(margin=dict(t=10), height=320,
-                      plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=yearly["year"], y=yearly["d_B"],
+        marker=dict(color=yearly["d_B"], colorscale=BLUE_SCALE, cornerradius=4, line=dict(width=0)),
+        text=[f"${v:.0f}B" for v in yearly["d_B"]], textposition="outside",
+        textfont=dict(size=11, color="#1a3a5c"),
+        hovertemplate="%{x}<br>$%{y:.1f}B<extra></extra>",
+    ))
+    fig.update_layout(**CHART_LAYOUT, margin=dict(t=10, b=30), height=340,
+                      yaxis=dict(title="USD (Billions)", gridcolor="rgba(0,0,0,0.05)"),
+                      xaxis=dict(title=""))
+    fig.update_xaxes(showgrid=False)
     st.plotly_chart(fig, use_container_width=True)
 
+    # Top 20 commodities
     st.divider()
     st.subheader("Top 20 Commodities by Import Demand")
     top_cmd = (
@@ -458,14 +480,14 @@ elif page == "Market Demand":
     )
     top_cmd["label"] = top_cmd["cmdCode"].astype(str) + " — " + top_cmd["commodity"].str[:45]
     top_cmd["d_B"] = top_cmd["world_demand"] / 1e9
-    fig2 = px.bar(top_cmd, y="label", x="d_B", orientation="h",
-                  labels={"d_B": "USD (Billions)", "label": ""},
-                  color_discrete_sequence=["#1B9AAA"])
-    fig2.update_layout(margin=dict(t=10, l=10), height=540,
-                       yaxis=dict(autorange="reversed"),
-                       plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    fig2 = hbar(
+        top_cmd["label"], top_cmd["d_B"], colorscale=TEAL_SCALE,
+        text_fmt=[f"${v:.1f}B" for v in top_cmd["d_B"]],
+        height=560, x_title="USD (Billions)",
+    )
     st.plotly_chart(fig2, use_container_width=True)
 
+    # Single commodity trend
     st.divider()
     st.subheader("Commodity Demand Trend")
     cmd_opts = pen.groupby(["cmdCode", "commodity"])["world_demand"].sum().reset_index().sort_values("world_demand", ascending=False)
@@ -476,12 +498,10 @@ elif page == "Market Demand":
     trend = pen[pen["cmdCode"] == sel_code].groupby("year")["world_demand"].sum().reset_index()
     trend["d_B"] = trend["world_demand"] / 1e9
     cname = pen.loc[pen["cmdCode"] == sel_code, "commodity"].iloc[0]
-    fig3 = px.line(trend, x="year", y="d_B", markers=True,
-                   labels={"d_B": "USD (B)", "year": ""},
-                   color_discrete_sequence=["#0F4C75"], title=cname)
-    fig3.update_layout(margin=dict(t=40), height=320,
-                       plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(
+        line_chart(trend["year"], trend["d_B"], "#0F4C75", "USD (Billions)", cname),
+        use_container_width=True,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -495,29 +515,31 @@ elif page == "GCC Penetration":
     latest_yr = int(pen["year"].max())
     snap = pen[pen["year"] == latest_yr].copy()
 
-    st.subheader("GCC Non-Fuel Exports Over Time")
+    # Aggregate trend
     gcc_yr = pen.groupby("year")["gcc_exports"].sum().reset_index()
     gcc_yr["g_B"] = gcc_yr["gcc_exports"] / 1e9
-    fig = px.area(gcc_yr, x="year", y="g_B",
-                  labels={"g_B": "GCC Exports (USD B)", "year": ""},
-                  color_discrete_sequence=["#FF6B35"])
-    fig.update_layout(margin=dict(t=10), height=280, showlegend=False,
-                      plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("GCC Non-Fuel Exports Over Time")
+    st.plotly_chart(
+        area_chart(gcc_yr["year"], gcc_yr["g_B"], "#FF6B35", "USD (Billions)", height=280),
+        use_container_width=True,
+    )
 
     st.divider()
     col_l, col_r = st.columns(2)
+
     with col_l:
         st.subheader(f"Highest Penetration ({latest_yr})")
+        st.caption("Commodities where GCC already holds significant market share.")
         high = snap.sort_values("penetration_pct", ascending=False).head(15).copy()
         high["label"] = high["cmdCode"].astype(str) + " — " + high["commodity"].str[:40]
-        fig2 = px.bar(high, y="label", x="penetration_pct", orientation="h",
-                      labels={"penetration_pct": "GCC Pen %", "label": ""},
-                      color_discrete_sequence=["#8338EC"])
-        fig2.update_layout(margin=dict(t=10, l=10), height=420,
-                           yaxis=dict(autorange="reversed"),
-                           plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+        fig2 = hbar(
+            high["label"], high["penetration_pct"], colorscale=PURPLE_SCALE,
+            text_fmt=[f"{v:.1f}%" for v in high["penetration_pct"]],
+            x_title="GCC Penetration %",
+        )
         st.plotly_chart(fig2, use_container_width=True)
+
     with col_r:
         st.subheader(f"Biggest Gaps ({latest_yr})")
         st.caption("High demand + low GCC penetration (<5%).")
@@ -527,28 +549,26 @@ elif page == "GCC Penetration":
         if not gaps.empty:
             gaps["label"] = gaps["cmdCode"].astype(str) + " — " + gaps["commodity"].str[:40]
             gaps["d_B"] = gaps["world_demand"] / 1e9
-            fig3 = px.bar(gaps, y="label", x="d_B", orientation="h",
-                          labels={"d_B": "Demand (USD B)", "label": ""},
-                          color_discrete_sequence=["#D62828"])
-            fig3.update_layout(margin=dict(t=10, l=10), height=420,
-                               yaxis=dict(autorange="reversed"),
-                               plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            fig3 = hbar(
+                gaps["label"], gaps["d_B"], colorscale=RED_SCALE,
+                text_fmt=[f"${v:.1f}B" for v in gaps["d_B"]],
+                x_title="Import Demand (USD B)",
+            )
             st.plotly_chart(fig3, use_container_width=True)
 
+    # Penetration trend
     st.divider()
-    st.subheader("Penetration Trend")
+    st.subheader("Penetration Trend Over Time")
     cmd_opts = pen.groupby(["cmdCode", "commodity"])["world_demand"].sum().reset_index().sort_values("world_demand", ascending=False)
     labels = cmd_opts.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     code_map = dict(zip(labels, cmd_opts["cmdCode"]))
     selected = st.selectbox("Select a commodity", labels[:80])
     sel_code = code_map[selected]
     pt = pen[pen["cmdCode"] == sel_code].sort_values("year")
-    fig4 = px.line(pt, x="year", y="penetration_pct", markers=True,
-                   labels={"penetration_pct": "GCC Penetration %", "year": ""},
-                   color_discrete_sequence=["#8338EC"])
-    fig4.update_layout(margin=dict(t=10), height=300,
-                       plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig4, use_container_width=True)
+    st.plotly_chart(
+        line_chart(pt["year"], pt["penetration_pct"], "#8338EC", "GCC Penetration %"),
+        use_container_width=True,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -576,11 +596,13 @@ elif page == "Demand Forecasts":
     f = fc[fc["cmdCode"] == sel_code].sort_values("year")
     cname = f["commodity"].iloc[0] if len(f) > 0 else sel_code
 
+    # Forecast chart
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=h["year"], y=h["world_demand"], mode="lines+markers", name="Historical",
-        line=dict(color="#0F4C75", width=2.5), marker=dict(size=6)))
-
+        line=dict(color="#0F4C75", width=2.5),
+        marker=dict(size=7, color="#0F4C75", line=dict(color="white", width=1.5)),
+    ))
     if not f.empty and not h.empty:
         bridge_yr = h["year"].max()
         bv = h.loc[h["year"] == bridge_yr, "world_demand"]
@@ -594,20 +616,26 @@ elif page == "Demand Forecasts":
             f_ext = f[["year", "demand_ensemble", "ci_lower", "ci_upper"]]
         fig.add_trace(go.Scatter(
             x=f_ext["year"], y=f_ext["demand_ensemble"], mode="lines+markers", name="Forecast",
-            line=dict(color="#D62828", width=2.5, dash="dash"), marker=dict(size=6)))
+            line=dict(color="#D62828", width=2.5, dash="dash"),
+            marker=dict(size=7, color="#D62828", line=dict(color="white", width=1.5)),
+        ))
         fig.add_trace(go.Scatter(
             x=pd.concat([f_ext["year"], f_ext["year"][::-1]]),
             y=pd.concat([f_ext["ci_upper"], f_ext["ci_lower"][::-1]]),
-            fill="toself", fillcolor="rgba(214,40,40,0.10)",
-            line=dict(width=0), name="Confidence Band"))
-
-    fig.update_layout(title=f"Global Demand Forecast — {cname}",
-                      yaxis_title="Import Demand (USD)", xaxis_title="",
-                      margin=dict(t=50), height=430,
-                      legend=dict(orientation="h", y=-0.12),
-                      plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            fill="toself", fillcolor="rgba(214,40,40,0.08)",
+            line=dict(width=0), name="Confidence Band",
+        ))
+    fig.update_layout(
+        **CHART_LAYOUT,
+        title=dict(text=f"Global Demand Forecast — {cname}", font=dict(size=14, color="#1a3a5c")),
+        yaxis=dict(title="Import Demand (USD)", gridcolor="rgba(0,0,0,0.05)"),
+        xaxis=dict(title="", gridcolor="rgba(0,0,0,0.05)"),
+        margin=dict(t=50, b=30), height=430,
+        legend=dict(orientation="h", y=-0.12),
+    )
     st.plotly_chart(fig, use_container_width=True)
 
+    # Forecast table
     if not f.empty:
         st.subheader("Forecast Values")
         tbl = f[["year", "demand_ensemble", "ci_lower", "ci_upper"]].copy()
@@ -616,15 +644,15 @@ elif page == "Demand Forecasts":
             tbl[c] = tbl[c].apply(fmt_usd)
         st.dataframe(tbl, use_container_width=True, hide_index=True)
 
+    # Top forecasted markets
     st.divider()
     st.subheader("Largest Forecasted Markets (4-Year Total)")
     top_fc = fc_totals.head(15).copy()
     top_fc["label"] = top_fc["cmdCode"].astype(str) + " — " + top_fc["commodity"].str[:45]
     top_fc["d_B"] = top_fc["demand_ensemble"] / 1e9
-    fig2 = px.bar(top_fc, y="label", x="d_B", orientation="h",
-                  labels={"d_B": "4Y Forecast (USD B)", "label": ""},
-                  color_discrete_sequence=["#D62828"])
-    fig2.update_layout(margin=dict(t=10, l=10), height=430,
-                       yaxis=dict(autorange="reversed"),
-                       plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+    fig2 = hbar(
+        top_fc["label"], top_fc["d_B"], colorscale=RED_SCALE,
+        text_fmt=[f"${v:.1f}B" for v in top_fc["d_B"]],
+        height=430, x_title="4-Year Forecast (USD B)",
+    )
     st.plotly_chart(fig2, use_container_width=True)
