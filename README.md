@@ -57,10 +57,7 @@ streamlit run app.py
 | **Market Demand** | Which commodities have the highest import demand across 40 destinations? |
 | **GCC Penetration** | Where does GCC already penetrate? Where are the whitespace gaps? |
 | **Demand Forecasts** | Holt-Winters 4-year demand projections with confidence bands per commodity |
-| **Price Outlook** | Unit value (USD/kg) forecasts — which products have rising or falling prices? |
-| **Opportunity Finder** | **Main tool** — filter and rank scored opportunities with download to CSV |
-| **Country Profiles** | Viability grades (A+ to D), LPI logistics scores, tariff rates, landing costs |
-| **Model Confidence** | Back-test MAPE/R², error distribution, ML classifier metrics |
+| **Opportunity Finder** | **Main tool** — pick a GCC country + commodity, see top destination markets ranked by score |
 
 ---
 
