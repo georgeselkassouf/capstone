@@ -1,0 +1,41 @@
+country,grade,viability_score
+Singapore,A+,1.0
+Germany,A+,1.0
+USA,A+,1.0
+China,A+,1.0
+Belgium,A+,1.0
+Switzerland,A+,1.0
+United Kingdom,A+,1.0
+Norway,A+,1.0
+Sweden,A+,1.0
+Canada,A+,1.0
+Japan,A+,1.0
+Netherlands,A,0.85
+France,A,0.85
+Australia,A,0.85
+Rep. of Korea,A,0.85
+India,A,0.85
+Spain,A,0.85
+Italy,A,0.85
+Viet Nam,A,0.85
+Malaysia,A,0.85
+Poland,A,0.85
+United Arab Emirates,A,0.85
+Mexico,B,0.65
+Thailand,B,0.65
+Brazil,B,0.65
+Türkiye,B,0.65
+Chile,B,0.65
+Indonesia,B,0.65
+Morocco,B,0.65
+Saudi Arabia,B,0.65
+Qatar,B,0.65
+Jordan,C,0.4
+South Africa,C,0.4
+Algeria,C,0.4
+Kuwait,C,0.4
+Oman,C,0.4
+Bahrain,C,0.4
+Lebanon,D,0.2
+Egypt,D,0.2
+Tunisia,D,0.2
