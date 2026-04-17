@@ -260,7 +260,7 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.divider()
-    st.caption("Data: UN Comtrade · ITC Trade Map")
+    st.caption("Data: UN Comtrade")
     st.caption("HS27 / HS71 / HS93 / HS99 excluded")
 
 
