@@ -76,7 +76,7 @@ Exclusions: re-exports, fuels (HS27), precious stones (HS71), arms (HS93), uncla
 
 ## Data Sources
 
-- **UN Comtrade** & **ITC Trade Map** — bilateral trade data (HS4, 2015-2024)
+- **UN Comtrade** — bilateral trade data (HS4, 2015-2024)
 - **World Bank** — LPI 2023, governance & development indicators
 - **WTO** — MFN applied tariff rates
 - **CEPII** — geographic distance matrix
