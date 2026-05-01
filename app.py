@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 from pathlib import Path
 
 st.set_page_config(
-    page_title="GCC Export Opportunities · OCO Global",
+    page_title="Trade Opportunity Engine · OCO Global",
     page_icon="🌍",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -189,12 +189,6 @@ def load_opp():
             .reset_index(drop=True))
     after = len(df)
 
-    if before != after:
-        st.sidebar.caption(
-            f"ℹ️ {before - after:,} duplicate opportunity rows removed "
-            f"(kept highest score per market)."
-        )
-
     return df
 
 
@@ -322,7 +316,7 @@ with st.sidebar:
     st.markdown(
         "<div style='text-align:center;padding:1.2rem 0 1.5rem'>"
         "<div style='font-size:2rem;font-weight:800;color:#fff;line-height:1.2'>"
-        "🌍 GCC Export<br>Opportunities</div>"
+        "🌍 Trade<br>Opportunity Engine</div>"
         "<div style='font-size:0.7rem;color:#7fa3c9;margin-top:0.5rem;letter-spacing:0.05em'>"
         "OCO GLOBAL · AUB MSBA CAPSTONE</div></div>",
         unsafe_allow_html=True,
@@ -349,8 +343,8 @@ if page == "Opportunity Finder":
         "the highest-potential destination markets ranked by a composite opportunity score."
     )
     st.caption(
-        "Score = Demand Forecast (30%) · Penetration Gap (20%) · Country Viability (20%) "
-        "· ML Growth Signal (15%) · Price Quality (10%) · Landing Cost (5%)"
+        "Score = Demand Forecast (25%) · Penetration Gap (20%) · Country Viability (20%) "
+        "· ML Growth Signal (10%) · Price Quality (10%) · Landing Cost (15%)"
     )
 
     opp = load_opp()
@@ -389,13 +383,11 @@ if page == "Opportunity Finder":
 
     # KPIs
     st.divider()
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3 = st.columns(3)
     k1.metric("Markets Ranked", f"{df['dest_country'].nunique()}")
     k2.metric("Top Score", f"{df['opportunity_score'].max():.3f}")
-    avg_pen = df["penetration_pct"].mean() if "penetration_pct" in df.columns else 0
-    k3.metric("Avg GCC Penetration", f"{avg_pen:.1f}%")
     if "demand_4y_total" in df.columns:
-        k4.metric("4-Year Demand (Total)", fmt_usd(df["demand_4y_total"].sum()))
+        k3.metric("4-Year Demand (Total)", fmt_usd(df["demand_4y_total"].sum()))
 
     # Top 15 bar chart
     st.divider()
@@ -478,7 +470,6 @@ elif page == "Executive Summary":
         st.error("Missing: **opportunity_rankings_full.csv**. Place it into `data/`.")
         st.stop()
     yearly = derive_yearly()
-    bm = backtest_metrics()
 
     latest_yr = int(yearly["year"].max()) if yearly is not None else "—"
     total_demand = yearly.loc[yearly["year"] == latest_yr, "total_demand"].iloc[0] if yearly is not None else 0
@@ -521,13 +512,9 @@ elif page == "Executive Summary":
                 use_container_width=True,
             )
 
-    # Model reliability
-    if bm:
-        st.divider()
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Forecast MAPE", f"{bm['mape']:.1f}%", "on $1M+ series")
-        c2.metric("Forecast R²", f"{bm['r2']:.3f}", f"N = {bm['n']:,}")
-        c3.metric("Forecast MAE", fmt_usd(bm["mae"]))
+
+
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -602,17 +589,6 @@ elif page == "GCC Penetration":
     latest_yr = int(pen["year"].max())
     snap = pen[pen["year"] == latest_yr].copy()
 
-    # Aggregate trend
-    gcc_yr = pen.groupby("year")["gcc_exports"].sum().reset_index()
-    gcc_yr["g_B"] = gcc_yr["gcc_exports"] / 1e9
-
-    st.subheader("GCC Non-Fuel Exports Over Time")
-    st.plotly_chart(
-        area_chart(gcc_yr["year"], gcc_yr["g_B"], "#FF6B35", "USD (Billions)", height=280),
-        use_container_width=True,
-    )
-
-    st.divider()
     col_l, col_r = st.columns(2)
 
     with col_l:
@@ -643,19 +619,6 @@ elif page == "GCC Penetration":
             )
             st.plotly_chart(fig3, use_container_width=True)
 
-    # Penetration trend
-    st.divider()
-    st.subheader("Penetration Trend Over Time")
-    cmd_opts = pen.groupby(["cmdCode", "commodity"])["world_demand"].sum().reset_index().sort_values("world_demand", ascending=False)
-    labels = cmd_opts.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
-    code_map = dict(zip(labels, cmd_opts["cmdCode"]))
-    selected = st.selectbox("Select a commodity", labels[:80])
-    sel_code = code_map[selected]
-    pt = pen[pen["cmdCode"] == sel_code].sort_values("year")
-    st.plotly_chart(
-        line_chart(pt["year"], pt["penetration_pct"], "#8338EC", "GCC Penetration %"),
-        use_container_width=True,
-    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -670,10 +633,33 @@ elif page == "Demand Forecasts":
     pen = files["gcc_export_penetration.csv"]
     hist = pen.groupby(["cmdCode", "commodity", "year"])["world_demand"].sum().reset_index()
 
-    fc_totals = (
-        fc.groupby(["cmdCode", "commodity"])["demand_ensemble"]
-        .sum().reset_index().sort_values("demand_ensemble", ascending=False)
-    )
+    # GCC exporter filter
+    opp_fc = load_opp()
+    col_gcc_fc, col_spacer = st.columns([1, 2])
+    with col_gcc_fc:
+        gcc_options = ["All GCC"] + (sorted(opp_fc["gcc_country"].unique().tolist()) if opp_fc is not None else [])
+        gcc_fc_sel = st.selectbox("Filter by GCC Exporter", gcc_options, key="fc_gcc")
+
+    # If a specific GCC country is selected, restrict commodity list to its top-ranked commodities
+    if gcc_fc_sel != "All GCC" and opp_fc is not None:
+        top_cmds = (
+            opp_fc[opp_fc["gcc_country"] == gcc_fc_sel]
+            .groupby(["cmdCode", "commodity"])["opportunity_score"]
+            .max().reset_index().sort_values("opportunity_score", ascending=False)
+        )
+        fc_filtered = fc[fc["cmdCode"].isin(top_cmds["cmdCode"])]
+        fc_totals = (
+            fc_filtered.groupby(["cmdCode", "commodity"])["demand_ensemble"]
+            .sum().reset_index()
+            .merge(top_cmds[["cmdCode", "opportunity_score"]], on="cmdCode")
+            .sort_values("opportunity_score", ascending=False)
+        )
+    else:
+        fc_totals = (
+            fc.groupby(["cmdCode", "commodity"])["demand_ensemble"]
+            .sum().reset_index().sort_values("demand_ensemble", ascending=False)
+        )
+
     labels = fc_totals.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     code_map = dict(zip(labels, fc_totals["cmdCode"]))
     selected = st.selectbox("Select a commodity", labels[:80])
