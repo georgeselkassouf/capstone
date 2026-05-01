@@ -2,7 +2,7 @@
 
 **Predicting Export Market Growth & Price Potential to Support Strategic Trade Diversification**
 
-An interactive Streamlit dashboard that helps consultants identify the most attractive non-fuel export opportunities for GCC countries across 34+ destination markets and hundreds of HS2 commodities.
+An interactive Streamlit dashboard that helps consultants identify the most attractive non-fuel export opportunities for GCC countries across 34+ destination markets and hundreds of HS4 commodities.
 
 Built for **OCO Global** as part of the AUB MSBA Capstone Project by Georges Elkassouf & Joseph Hobeika.
 
@@ -116,17 +116,6 @@ Key columns: `gcc_country`, `cmdCode`, `commodity`, `dest_country`, `opportunity
 | **WITS / UNCTAD TRAINS** | MFN applied tariff rates (HS6 → HS2) |
 | **World Bank Open Data** | Country viability indicators (2021–2023) |
 | **CEPII** | Geographic distance matrix (capital-to-capital) |
-
----
-
-## Transport Mode Logic
-
-Rule-based four-filter recommendation (no ML — Comtrade has no mode-level labels):
-
-1. **Geography** — landlocked pairs → Land
-2. **Perishability + Long-haul** — short shelf-life + distance > 3 000 km → Air
-3. **Unit value** — high-value / low-bulk commodities → Air
-4. **Default** → Sea
 
 ---
 
