@@ -67,12 +67,12 @@ The composite opportunity score is a weighted sum of six sub-scores, each normal
 
 | Component | Weight | Source |
 | --- | --- | --- |
-| Demand Forecast (4-year total) | **30%** | Holt-Winters forecasts — `demand_forecast_by_dest_country.csv` |
+| Demand Forecast (4-year total) | **25%** | Holt-Winters forecasts — `demand_forecast_by_dest_country.csv` |
 | Penetration Gap (1 − current GCC share) | **20%** | `gcc_export_penetration.csv` |
 | Country Viability (World Bank composite) | **20%** | `destination_country_viability.csv` |
-| ML Structural Growth Probability | **15%** | Random Forest + XGBoost ensemble — `ml_growth_probabilities.csv` |
+| ML Structural Growth Probability | **10%** | Random Forest + XGBoost ensemble — `ml_growth_probabilities.csv` |
 | Price Quality (unit value level + CAGR) | **10%** | `gcc_export_unit_value_forecast.csv` |
-| Landing Cost Index (MFN tariff + LPI) | **5%** | WITS/TRAINS tariffs + World Bank LPI 2023 |
+| Landing Cost Index (MFN tariff + LPI) | **15%** | WITS/TRAINS tariffs + World Bank LPI 2023 |
 
 Exclusions applied before scoring: re-exports (`reexport_flags.csv`), fuels (HS27), precious stones (HS71), arms (HS93), unclassified (HS99).
 
