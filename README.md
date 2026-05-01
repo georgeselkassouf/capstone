@@ -1,4 +1,4 @@
-# GCC Export Opportunity Dashboard
+# Trade Opportunity Engine
 
 **Predicting Export Market Growth & Price Potential to Support Strategic Trade Diversification**
 
@@ -28,7 +28,6 @@ data/
   opportunity_rankings_full.csv       # Full composite opportunity scores (main dashboard feed)
   top20_per_gcc_country.csv           # Top 20 opportunities per GCC exporter
   ml_growth_probabilities.csv         # ML structural growth probabilities (country × cmdCode)
-  backtest_results.csv                # Forecast backtest actual vs predicted
   reexport_flags.csv                  # Re-export filter flags per GCC country × cmdCode
 ```
 
@@ -57,7 +56,7 @@ streamlit run app.py
 | **Executive Summary** | Total addressable demand, combined GCC export size, best opportunity per country |
 | **Market Demand** | Which commodities have the highest import demand across the 34 destination markets? |
 | **GCC Penetration** | Where does GCC already penetrate? Where are the whitespace gaps? (aggregate across all 6 GCC members) |
-| **Demand Forecasts** | Holt-Winters 4-year demand projections with confidence bands per commodity |
+| **Demand Forecasts** | Holt-Winters 4-year demand projections with confidence bands per commodity; filterable by GCC exporter to surface the most relevant commodities |
 
 ---
 

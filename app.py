@@ -314,11 +314,13 @@ def backtest_metrics():
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown(
-        "<div style='text-align:center;padding:1.2rem 0 1.5rem'>"
-        "<div style='font-size:2rem;font-weight:800;color:#fff;line-height:1.2'>"
-        "🌍 Trade<br>Opportunity Engine</div>"
-        "<div style='font-size:0.7rem;color:#7fa3c9;margin-top:0.5rem;letter-spacing:0.05em'>"
-        "OCO GLOBAL · AUB MSBA CAPSTONE</div></div>",
+        "<div style='text-align:center;padding:1.4rem 0 1.6rem'>"
+        "<div style='font-size:0.65rem;font-weight:700;color:#4a90c4;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.6rem'>"
+        "OCO Global · AUB MSBA Capstone</div>"
+        "<div style='font-size:1.35rem;font-weight:800;color:#fff;line-height:1.3;letter-spacing:-0.01em'>"
+        "Trade Opportunity<br>Engine</div>"
+        "<div style='width:40px;height:2px;background:linear-gradient(90deg,#2e86de,#1B9AAA);margin:0.8rem auto 0;border-radius:2px'></div>"
+        "</div>",
         unsafe_allow_html=True,
     )
     st.divider()
@@ -589,33 +591,36 @@ elif page == "GCC Penetration":
     latest_yr = int(pen["year"].max())
     snap = pen[pen["year"] == latest_yr].copy()
 
-    col_l, col_r = st.columns(2)
+    _, col_c, _ = st.columns([0.5, 9, 0.5])
 
-    with col_l:
+    with col_c:
         st.subheader(f"Highest Penetration ({latest_yr})")
         st.caption("Commodities where GCC already holds significant market share.")
         high = snap.sort_values("penetration_pct", ascending=False).head(15).copy()
-        high["label"] = high["cmdCode"].astype(str) + " — " + high["commodity"].str[:40]
+        high["label"] = high["cmdCode"].astype(str) + " — " + high["commodity"].str[:50]
         fig2 = hbar(
             high["label"], high["penetration_pct"], colorscale=PURPLE_SCALE,
             text_fmt=[f"{v:.1f}%" for v in high["penetration_pct"]],
-            x_title="GCC Penetration %",
+            x_title="GCC Penetration %", height=600,
         )
         st.plotly_chart(fig2, use_container_width=True)
 
-    with col_r:
+    st.divider()
+    _, col_c2, _ = st.columns([0.5, 9, 0.5])
+
+    with col_c2:
         st.subheader(f"Biggest Gaps ({latest_yr})")
         st.caption("High demand + low GCC penetration (<5%).")
         gaps = snap[(snap["penetration_pct"] < 5) &
                     (snap["world_demand"] > snap["world_demand"].quantile(0.5))]
         gaps = gaps.sort_values("world_demand", ascending=False).head(15).copy()
         if not gaps.empty:
-            gaps["label"] = gaps["cmdCode"].astype(str) + " — " + gaps["commodity"].str[:40]
+            gaps["label"] = gaps["cmdCode"].astype(str) + " — " + gaps["commodity"].str[:50]
             gaps["d_B"] = gaps["world_demand"] / 1e9
             fig3 = hbar(
                 gaps["label"], gaps["d_B"], colorscale=RED_SCALE,
                 text_fmt=[f"${v:.1f}B" for v in gaps["d_B"]],
-                x_title="Import Demand (USD B)",
+                x_title="Import Demand (USD B)", height=600,
             )
             st.plotly_chart(fig3, use_container_width=True)
 
