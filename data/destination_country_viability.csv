@@ -1,41 +1,41 @@
-country,grade,viability_score
-Singapore,A+,1.0
-Germany,A+,1.0
-USA,A+,1.0
-China,A+,1.0
-Belgium,A+,1.0
-Switzerland,A+,1.0
-United Kingdom,A+,1.0
-Norway,A+,1.0
-Sweden,A+,1.0
-Canada,A+,1.0
-Japan,A+,1.0
-Netherlands,A,0.85
-France,A,0.85
-Australia,A,0.85
-Rep. of Korea,A,0.85
-India,A,0.85
-Spain,A,0.85
-Italy,A,0.85
-Viet Nam,A,0.85
-Malaysia,A,0.85
-Poland,A,0.85
-United Arab Emirates,A,0.85
-Mexico,B,0.65
-Thailand,B,0.65
-Brazil,B,0.65
-Türkiye,B,0.65
-Chile,B,0.65
-Indonesia,B,0.65
-Morocco,B,0.65
-Saudi Arabia,B,0.65
-Qatar,B,0.65
-Jordan,C,0.4
-South Africa,C,0.4
-Algeria,C,0.4
-Kuwait,C,0.4
-Oman,C,0.4
-Bahrain,C,0.4
-Lebanon,D,0.2
-Egypt,D,0.2
-Tunisia,D,0.2
+country,viability_score,grade
+Singapore,0.887875,A
+United Arab Emirates,0.8436250000000002,A
+Germany,0.842875,A
+Netherlands,0.8365000000000001,A
+Belgium,0.809875,A
+USA,0.785875,A
+China,0.78525,A
+Switzerland,0.7815,A
+Viet Nam,0.77375,A
+United Kingdom,0.76975,A
+Sweden,0.7691250000000001,A
+Canada,0.768625,A
+India,0.7627499999999999,A
+France,0.7532500000000001,A
+Spain,0.7492500000000001,B
+Malaysia,0.7490000000000001,B
+Australia,0.7483749999999999,B
+Rep. of Korea,0.7455,B
+Japan,0.73825,B
+Poland,0.7190000000000001,B
+Norway,0.71475,B
+Italy,0.71175,B
+Saudi Arabia,0.68025,B
+Mexico,0.6705000000000001,B
+Qatar,0.6607500000000001,B
+Thailand,0.645375,B
+Indonesia,0.644,B
+Morocco,0.61725,B
+Brazil,0.5760000000000001,B
+Chile,0.5606249999999999,B
+Türkiye,0.5565,B
+Jordan,0.513,B
+Kuwait,0.493375,C
+Egypt,0.463375,C
+Bahrain,0.451875,C
+Oman,0.451875,C
+South Africa,0.44687499999999997,C
+Algeria,0.40112499999999995,C
+Tunisia,0.3615,C
+Lebanon,0.2675,D
