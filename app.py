@@ -123,6 +123,81 @@ def load(name):
     return pd.read_csv(path) if path.exists() else None
 
 
+# Columns the dashboard actually uses from opportunity_rankings_full.csv.
+# Loading only these cuts parse time and memory significantly on large files.
+_OPP_COLS = [
+    "gcc_country", "cmdCode", "commodity", "dest_country", "opportunity_score",
+    "grade", "demand_4y_total", "penetration_pct", "pen_opportunity",
+    "ml_growth_prob", "uv_mean", "uv_cagr",
+    "weighted_dist_km", "dist_km",          # keep both; one may be absent
+    "lpi_score", "mfn_tariff_rate",
+    "recommended_transport", "opportunity_rationale",
+]
+
+_OPP_DTYPES = {
+    "gcc_country": "category",
+    "dest_country": "category",
+    "commodity": "category",
+    "grade": "category",
+    "recommended_transport": "category",
+    "cmdCode": "int32",
+    "opportunity_score": "float32",
+    "demand_4y_total": "float32",
+    "penetration_pct": "float32",
+    "pen_opportunity": "float32",
+    "ml_growth_prob": "float32",
+    "uv_mean": "float32",
+    "uv_cagr": "float32",
+    "weighted_dist_km": "float32",
+    "dist_km": "float32",
+    "lpi_score": "float32",
+    "mfn_tariff_rate": "float32",
+}
+
+
+@st.cache_data(show_spinner="Loading opportunity rankings…")
+def load_opp():
+    """
+    Load opportunity_rankings_full.csv with memory-efficient dtypes,
+    restrict to needed columns, and deduplicate to one row per
+    (gcc_country, cmdCode, dest_country) — keeping the highest score.
+
+    The file may be large (90+ MB) if the notebook produced yearly rows
+    or HS4-level rows; deduplication ensures the dashboard always shows
+    the single best score per opportunity triplet.
+    """
+    path = DATA / "opportunity_rankings_full.csv"
+    if not path.exists():
+        return None
+
+    # Read only columns that exist in the file to avoid KeyErrors on
+    # optional columns (weighted_dist_km, dist_km, etc.)
+    header = pd.read_csv(path, nrows=0).columns.tolist()
+    use_cols = [c for c in _OPP_COLS if c in header]
+    dtype_map = {k: v for k, v in _OPP_DTYPES.items() if k in use_cols}
+
+    df = pd.read_csv(path, usecols=use_cols, dtype=dtype_map,
+                     low_memory=False)
+
+    # Deduplicate: one row per (gcc_country, cmdCode, dest_country).
+    # If the notebook produced one row per year or multiple model runs,
+    # keep the row with the highest opportunity_score.
+    key = ["gcc_country", "cmdCode", "dest_country"]
+    before = len(df)
+    df = (df.sort_values("opportunity_score", ascending=False)
+            .drop_duplicates(subset=key, keep="first")
+            .reset_index(drop=True))
+    after = len(df)
+
+    if before != after:
+        st.sidebar.caption(
+            f"ℹ️ {before - after:,} duplicate opportunity rows removed "
+            f"(kept highest score per market)."
+        )
+
+    return df
+
+
 def require(*names):
     frames = {}
     missing = []
@@ -274,11 +349,14 @@ if page == "Opportunity Finder":
         "the highest-potential destination markets ranked by a composite opportunity score."
     )
     st.caption(
-        "Score = Demand (25%) · Penetration Gap (20%) · Country Viability (20%) "
-        "· Landing Cost (15%) · ML Growth Signal (10%) · Price Quality (10%)"
+        "Score = Demand Forecast (30%) · Penetration Gap (20%) · Country Viability (20%) "
+        "· ML Growth Signal (15%) · Price Quality (10%) · Landing Cost (5%)"
     )
 
-    opp = require("opportunity_rankings_full.csv")
+    opp = load_opp()
+    if opp is None:
+        st.error("Missing: **opportunity_rankings_full.csv**. Place it into `data/`.")
+        st.stop()
 
     col_gcc, col_search = st.columns([1, 2])
     with col_gcc:
@@ -287,7 +365,7 @@ if page == "Opportunity Finder":
     df_gcc = opp[opp["gcc_country"] == gcc_sel].copy()
     cmd_scores = (
         df_gcc.groupby(["cmdCode", "commodity"])["opportunity_score"]
-        .mean().reset_index().sort_values("opportunity_score", ascending=False)
+        .max().reset_index().sort_values("opportunity_score", ascending=False)
     )
     cmd_labels = cmd_scores.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     cmd_code_map = dict(zip(cmd_labels, cmd_scores["cmdCode"]))
@@ -338,11 +416,17 @@ if page == "Opportunity Finder":
     col_map = {
         "dest_country": "Target Market", "opportunity_score": "Score", "grade": "Grade",
         "demand_4y_total": "4Y Demand", "penetration_pct": "GCC Pen %",
-        "pen_opportunity": "Entry Room", "uv_mean": "UV ($/kg)", "uv_cagr": "Price CAGR %",
-        "ml_growth_prob": "ML Growth P", "dist_km": "Distance (km)",
+        "pen_opportunity": "Entry Room", "ml_growth_prob": "ML Growth P",
+        "uv_mean": "UV ($/kg)", "uv_cagr": "Price CAGR %",
         "lpi_score": "LPI", "mfn_tariff_rate": "Tariff %",
+        "weighted_dist_km": "Distance (km)", "dist_km": "Distance (km)",
         "recommended_transport": "Transport", "opportunity_rationale": "Rationale",
     }
+    # prefer weighted_dist_km; drop dist_km if both present to avoid duplicate columns
+    if "weighted_dist_km" in df_top.columns and "dist_km" in df_top.columns:
+        col_map.pop("dist_km", None)
+    elif "weighted_dist_km" not in df_top.columns:
+        col_map.pop("weighted_dist_km", None)
     avail = {k: v for k, v in col_map.items() if k in df_top.columns}
     table = df_top[list(avail.keys())].rename(columns=avail).copy()
     if "4Y Demand" in table.columns:
@@ -374,7 +458,7 @@ if page == "Opportunity Finder":
 
     # Download
     st.divider()
-    dl_cols = [c for c in col_map if c in df.columns]
+    dl_cols = [c for c in avail if c in df.columns]
     st.download_button(
         "⬇️ Download full results as CSV",
         df[dl_cols].to_csv(index=False).encode("utf-8"),
@@ -389,7 +473,10 @@ elif page == "Executive Summary":
     st.title("Executive Summary")
     st.markdown("Where should GCC countries focus non-fuel export efforts over the next 3–5 years?")
 
-    opp = require("opportunity_rankings_full.csv")
+    opp = load_opp()
+    if opp is None:
+        st.error("Missing: **opportunity_rankings_full.csv**. Place it into `data/`.")
+        st.stop()
     yearly = derive_yearly()
     bm = backtest_metrics()
 
@@ -509,7 +596,7 @@ elif page == "Market Demand":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "GCC Penetration":
     st.title("GCC Export Penetration")
-    st.markdown("**Penetration %** = GCC exports / import demand. Low penetration + high demand = opportunity.")
+    st.markdown("**Penetration %** = Combined GCC exports / destination import demand. Low penetration + high demand = opportunity. Figures aggregate all 6 GCC member states.")
 
     pen = require("gcc_export_penetration.csv")
     latest_yr = int(pen["year"].max())
