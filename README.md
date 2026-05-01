@@ -16,20 +16,18 @@ Open `capstone_code.ipynb` in Google Colab and run all cells through the final e
 
 ### 2. Copy data files
 
-Download the CSV files and place them into the `data/` directory of this repo:
+The app requires **three CSV files** in the `data/` directory. All scoring components (viability grades, ML probabilities, unit values, tariffs, LPI, rationale strings) are pre-computed by the notebook and embedded in `opportunity_rankings_full.csv`.
 
 ```
 data/
   gcc_export_penetration.csv          # GCC-aggregate penetration panel (all 6 members combined)
   demand_forecast_global.csv          # Holt-Winters 4-year global demand forecasts
-  demand_forecast_by_dest_country.csv # Destination-level demand forecasts
-  gcc_export_unit_value_forecast.csv  # Unit value (price) forecasts per GCC country
-  destination_country_viability.csv   # Country viability grades & scores
   opportunity_rankings_full.csv       # Full composite opportunity scores (main dashboard feed)
-  top20_per_gcc_country.csv           # Top 20 opportunities per GCC exporter
-  ml_growth_probabilities.csv         # ML structural growth probabilities (country × cmdCode)
-  reexport_flags.csv                  # Re-export filter flags per GCC country × cmdCode
 ```
+
+> **Optional:** `backtest_results.csv` — if present in `data/`, the app will compute back-test metrics (R², MAPE) automatically. The app runs fine without it.
+
+> **Pipeline-only outputs** (produced by the notebook but not loaded directly by the app): `demand_forecast_by_dest_country.csv`, `gcc_export_unit_value_forecast.csv`, `destination_country_viability.csv`, `top20_per_gcc_country.csv`, `ml_growth_probabilities.csv`, `reexport_flags.csv`. These feed the scoring pipeline in the notebook and their outputs are embedded in `opportunity_rankings_full.csv`.
 
 ### 3. Run locally
 
@@ -54,7 +52,7 @@ streamlit run app.py
 | --- | --- |
 | **Opportunity Finder** | **Main tool** — pick a GCC country + commodity, see top destination markets ranked by composite score |
 | **Executive Summary** | Total addressable demand, combined GCC export size, best opportunity per country |
-| **Market Demand** | Which commodities have the highest import demand across the 34 destination markets? |
+| **Market Demand** | Which commodities have the highest import demand across the 40 destination countries? |
 | **GCC Penetration** | Where does GCC already penetrate? Where are the whitespace gaps? (aggregate across all 6 GCC members) |
 | **Demand Forecasts** | Holt-Winters 4-year demand projections with confidence bands per commodity; filterable by GCC exporter to surface the most relevant commodities |
 
@@ -66,14 +64,14 @@ The composite opportunity score is a weighted sum of six sub-scores, each normal
 
 | Component | Weight | Source |
 | --- | --- | --- |
-| Demand Forecast (4-year total) | **25%** | Holt-Winters forecasts — `demand_forecast_by_dest_country.csv` |
-| Penetration Gap (1 − current GCC share) | **20%** | `gcc_export_penetration.csv` |
-| Country Viability (World Bank composite) | **20%** | `destination_country_viability.csv` |
-| ML Structural Growth Probability | **10%** | Random Forest + XGBoost ensemble — `ml_growth_probabilities.csv` |
-| Price Quality (unit value level + CAGR) | **10%** | `gcc_export_unit_value_forecast.csv` |
-| Landing Cost Index (MFN tariff + LPI) | **15%** | WITS/TRAINS tariffs + World Bank LPI 2023 |
+| Demand Forecast (4-year total) | **25%** | Pre-computed by notebook — `demand_4y_total` column in `opportunity_rankings_full.csv` |
+| Penetration Gap (1 − current GCC share) | **20%** | `pen_opportunity` column in `opportunity_rankings_full.csv` |
+| Country Viability (World Bank composite) | **20%** | `grade` / viability score columns in `opportunity_rankings_full.csv` |
+| Landing Cost Index (MFN tariff + LPI) | **15%** | `mfn_tariff_rate` + `lpi_score` columns in `opportunity_rankings_full.csv` |
+| ML Growth Signal | **10%** | Random Forest + XGBoost ensemble — `ml_growth_prob` column in `opportunity_rankings_full.csv` |
+| Price Quality (unit value level + CAGR) | **10%** | `uv_mean` + `uv_cagr` columns in `opportunity_rankings_full.csv` |
 
-Exclusions applied before scoring: re-exports (`reexport_flags.csv`), fuels (HS27), precious stones (HS71), arms (HS93), unclassified (HS99).
+Exclusions applied before scoring: re-exports, fuels (HS27), precious stones (HS71), arms (HS93), unclassified (HS99).
 
 ---
 
@@ -91,18 +89,21 @@ Aggregated across all 6 GCC member states (UAE, Saudi Arabia, Qatar, Kuwait, Oma
 | `gcc_exports` | Combined GCC exports to destination markets (USD) |
 | `penetration_pct` | `gcc_exports / world_demand × 100` |
 
-### `ml_growth_probabilities.csv`
+### `demand_forecast_global.csv`
 
 | Column | Description |
 | --- | --- |
-| `country` | Destination country name |
 | `cmdCode` | HS2 commodity code |
-| `ml_growth_prob` | Calibrated probability of structural growth (0–1) |
+| `commodity` | HS2 commodity description |
+| `year` | Forecast year (2025–2028) |
+| `demand_ensemble` | Holt-Winters point forecast (USD) |
+| `ci_lower` | Lower confidence bound |
+| `ci_upper` | Upper confidence bound |
 
 ### `opportunity_rankings_full.csv`
-One row per GCC exporter × destination country × HS2 commodity combination.
+One row per GCC exporter × destination country × HS2 commodity combination. All scoring sub-components are pre-computed and embedded here.
 
-Key columns: `gcc_country`, `cmdCode`, `commodity`, `dest_country`, `opportunity_score`, `grade`, `demand_4y_total`, `penetration_pct`, `pen_opportunity`, `ml_growth_prob`, `uv_mean`, `uv_cagr`, `weighted_dist_km`, `lpi_score`, `mfn_tariff_rate`, `recommended_transport`, `opportunity_rationale`.
+Key columns: `gcc_country`, `cmdCode`, `commodity`, `dest_country`, `opportunity_score`, `grade`, `demand_4y_total`, `penetration_pct`, `pen_opportunity`, `ml_growth_prob`, `uv_mean`, `uv_cagr`, `weighted_dist_km`, `dist_km`, `lpi_score`, `mfn_tariff_rate`, `recommended_transport`, `opportunity_rationale`.
 
 ---
 
