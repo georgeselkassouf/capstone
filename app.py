@@ -631,7 +631,7 @@ elif page == "GCC Penetration":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Demand Forecasts":
     st.title("Demand Forecasts (2025–2028)")
-    st.markdown("Holt-Winters forecasts per commodity.")
+    st.markdown("Holt-Winters forecasts per commodity")
 
     files = require("demand_forecast_global.csv", "gcc_export_penetration.csv")
     fc = files["demand_forecast_global.csv"]
