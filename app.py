@@ -344,9 +344,24 @@ if page == "Opportunity Finder":
         "Pick a **GCC exporter** and a **commodity** — the dashboard surfaces "
         "the highest-potential destination markets ranked by a composite opportunity score."
     )
-    st.caption(
-        "Score = Demand Forecast (25%) · Penetration Gap (20%) · Country Viability (20%) "
-        "· ML Growth Signal (10%) · Price Quality (10%) · Landing Cost (15%)"
+    st.markdown(
+        """
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px;">
+            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
+                         font-size:0.78rem;font-weight:600;">📈 Demand Forecast &nbsp;<b>25%</b></span>
+            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
+                         font-size:0.78rem;font-weight:600;">🎯 Penetration Gap &nbsp;<b>20%</b></span>
+            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
+                         font-size:0.78rem;font-weight:600;">🏛️ Country Viability &nbsp;<b>20%</b></span>
+            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
+                         font-size:0.78rem;font-weight:600;">🚢 Landing Cost &nbsp;<b>15%</b></span>
+            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
+                         font-size:0.78rem;font-weight:600;">🤖 ML Growth Signal &nbsp;<b>10%</b></span>
+            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
+                         font-size:0.78rem;font-weight:600;">💰 Price Quality &nbsp;<b>10%</b></span>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     opp = load_opp()
@@ -387,7 +402,19 @@ if page == "Opportunity Finder":
     st.divider()
     k1, k2, k3 = st.columns(3)
     k1.metric("Markets Ranked", f"{df['dest_country'].nunique()}")
-    k2.metric("Top Score", f"{df['opportunity_score'].max():.3f}")
+
+    # GCC Exports for this country + commodity (latest year from penetration panel)
+    pen_data = load("gcc_export_penetration.csv")
+    if pen_data is not None and "gcc_exports" in pen_data.columns:
+        latest_pen_yr = int(pen_data["year"].max())
+        cmd_pen = pen_data[
+            (pen_data["cmdCode"] == sel_code) & (pen_data["year"] == latest_pen_yr)
+        ]
+        gcc_exp_val = cmd_pen["gcc_exports"].sum() if not cmd_pen.empty else 0
+        k2.metric("GCC Exports (Latest)", fmt_usd(gcc_exp_val), f"{latest_pen_yr}")
+    else:
+        k2.metric("Top Score", f"{df['opportunity_score'].max():.3f}")
+
     if "demand_4y_total" in df.columns:
         k3.metric("4-Year Demand (Total)", fmt_usd(df["demand_4y_total"].sum()))
 
@@ -402,6 +429,13 @@ if page == "Opportunity Finder":
         text_fmt=[f"{v:.3f}" for v in df_top["opportunity_score"]],
         x_title="Opportunity Score",
     )
+    # Zoom x-axis: start just below the lowest score so differences are legible
+    _scores = df_top["opportunity_score"]
+    _spread = float(_scores.max() - _scores.min())
+    _pad = max(_spread * 0.5, 0.01)
+    _x_min = max(0.0, float(_scores.min()) - _pad)
+    _x_max = float(_scores.max()) + _pad * 0.4
+    fig.update_xaxes(range=[_x_min, _x_max])
     st.plotly_chart(fig, use_container_width=True)
 
     # Detail table
