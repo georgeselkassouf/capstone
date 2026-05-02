@@ -394,7 +394,7 @@ if page == "Opportunity Finder":
     # Top 15 bar chart
     st.divider()
     st.subheader(f"Top 15 Destinations — {commodity_name[:55]}")
-    st.caption(f"Exporter: **{gcc_sel}** · Re-exports & saturated markets excluded")
+    st.caption(f"Exporter: **{gcc_sel}**")
     df_top = df.head(15)
     fig = hbar(
         df_top["dest_country"], df_top["opportunity_score"],
