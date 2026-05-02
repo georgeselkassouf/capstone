@@ -326,7 +326,7 @@ with st.sidebar:
     st.divider()
     page = st.radio(
         "Navigate",
-        ["Opportunity Finder", "Executive Summary", "Market Demand",
+        ["Home", "Opportunity Finder", "Executive Summary", "Market Demand",
          "GCC Penetration", "Demand Forecasts"],
         label_visibility="collapsed",
     )
@@ -336,9 +336,167 @@ with st.sidebar:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# HOME
+# ═══════════════════════════════════════════════════════════════════════════
+if page == "Home":
+    st.markdown(
+        "<div style='padding:2.4rem 0 1rem;'>"
+        "<div style='font-size:0.72rem;font-weight:700;color:#2e86de;letter-spacing:0.18em;"
+        "text-transform:uppercase;margin-bottom:0.5rem'>OCO Global · AUB MSBA Capstone · Spring 2026</div>"
+        "<h1 style='font-size:2.4rem;font-weight:900;color:#0f2847;line-height:1.18;margin:0 0 0.6rem'>Trade Opportunity Engine</h1>"
+        "<p style='font-size:1.1rem;color:#4a5568;max-width:720px;line-height:1.7;margin:0;'>"
+        "A data-driven decision-support tool that identifies and ranks the highest-potential non-fuel "
+        "export opportunities for GCC countries across 34+ global destination markets — powered by "
+        "demand forecasting, machine learning, and a multi-criteria composite scoring framework."
+        "</p></div>",
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+
+    # ── What this tool does ──────────────────────────────────────────────────
+    st.markdown("## What This Tool Does")
+    st.markdown(
+        "The engine integrates ten years of UN Comtrade trade flows (2015–2024) with World Bank "
+        "logistics and governance indicators, MFN applied tariff data, and CEPII geographic distances "
+        "to produce a single, interpretable **Opportunity Score** (0–1) for every combination of "
+        "GCC exporter × commodity × destination market. "
+        "Scores are computed across hundreds of HS4-level commodities and surfaced through five "
+        "analytical views described below."
+    )
+
+    st.divider()
+
+    # ── Page-by-page guide ───────────────────────────────────────────────────
+    st.markdown("## Page Guide")
+
+    pages_info = [
+        ("🔍", "Opportunity Finder", "primary",
+         "The core analytical tool.",
+         [
+             "Select a **GCC exporter** (UAE, Saudi Arabia, Qatar, Kuwait, Oman, or Bahrain) and a **commodity** using the searchable dropdown — simply start typing a keyword such as *aluminium*, *dairy*, or *machinery*.",
+             "The engine instantly surfaces the **top 15 destination markets** ranked by composite opportunity score, visualised as both a ranked bar chart and a **world choropleth map** coloured by attractiveness.",
+             "A detailed **score-components table** breaks down each market's demand forecast, entry room, ML growth probability, logistics score, tariff rate, and recommended shipping mode.",
+             "**Commodity-level characteristics** — unit value and price CAGR — are displayed as summary cards beneath the table, since these metrics are constant across destination markets.",
+             "Use the **Download CSV** button to export the full ranked list for offline analysis or client reporting.",
+         ]),
+        ("📊", "Executive Summary", "secondary",
+         "A high-level strategic overview for stakeholders.",
+         [
+             "Three headline KPIs quantify the total addressable import demand across the 40 destinations, combined GCC export value, and the number of commodity-market pairs evaluated.",
+             "A summary table identifies the **single highest-scored export opportunity** per GCC member state — the most actionable starting point for country-level trade strategy.",
+             "Two trend charts track the evolution of global import demand and GCC non-fuel export performance from 2015 to 2024, providing macroeconomic context for the opportunity scores.",
+         ]),
+        ("🌍", "Market Demand", "secondary",
+         "Understand what the world is importing and where demand is growing.",
+         [
+             "A dual-axis chart displays **annual total import demand** across the 40 destination markets (bars, left axis) alongside the **year-on-year growth rate** (dotted line, right axis) — COVID-era contraction and recovery are clearly visible.",
+             "The **Top 20 commodity sectors** are ranked by total import value. Selecting a commodity from the dropdown **highlights its bar** in the chart and simultaneously renders its **historical demand trend** below, with YoY growth bars colour-coded red/blue.",
+         ]),
+        ("📈", "GCC Penetration", "secondary",
+         "Identify where GCC already competes — and where the whitespace lies.",
+         [
+             "The **highest-penetration chart** shows commodity sectors where GCC suppliers already hold the largest share of destination import demand. A high penetration signals competitive strength but limited incremental upside.",
+             "The **untapped opportunities chart** highlights high-demand sectors where GCC penetration remains below 5% — these represent the most strategically significant entry points for export diversification.",
+         ]),
+        ("📉", "Demand Forecasts", "secondary",
+         "Project commodity import demand four years forward.",
+         [
+             "Holt-Winters exponential smoothing models, fitted on 2015–2024 historical data, generate **4-year demand projections (2025–2028)** with 95% confidence intervals for each commodity sector.",
+             "Filter by GCC exporter to restrict the commodity list to sectors most relevant to that country's opportunity profile.",
+             "A **forecast table** presents point estimates and confidence bounds by year. A ranked bar chart below identifies the commodities with the largest total projected demand over the forecast horizon.",
+         ]),
+    ]
+
+    for icon, name, _kind, tagline, bullets in pages_info:
+        with st.expander(f"{icon}  **{name}** — {tagline}", expanded=(_kind == "primary")):
+            for b in bullets:
+                st.markdown(f"- {b}")
+
+    st.divider()
+
+    # ── Scoring methodology ──────────────────────────────────────────────────
+    st.markdown("## Composite Scoring Methodology")
+    st.markdown(
+        "Every opportunity is scored on a 0–1 scale by combining six independently normalised "
+        "sub-scores. Each sub-score is min-max scaled across all observations before weighting, "
+        "ensuring no single component dominates due to unit differences."
+    )
+
+    score_rows = [
+        ("📈 Demand Forecast", "25%",
+         "4-year total import demand projected by Holt-Winters for the destination market and commodity. "
+         "Captures the structural size of the opportunity."),
+        ("🎯 Penetration Gap", "20%",
+         "The inverse of the current GCC market share in the destination (1 − penetration %). "
+         "High gap = large untapped headroom."),
+        ("🏛️ Country Viability", "20%",
+         "World Bank composite score (2021–2023) covering economic performance, governance quality, "
+         "and infrastructure readiness. Filters out structurally unattractive or high-risk markets."),
+        ("🚢 Landing Cost Index", "15%",
+         "Blends the inverted MFN applied tariff rate (50%) and the World Bank Logistics Performance "
+         "Index (50%). Lower tariffs and better logistics both increase this score."),
+        ("🤖 ML Growth Signal", "10%",
+         "Ensemble probability from Random Forest and XGBoost classifiers predicting whether the "
+         "market will exhibit above-median structural export growth in the next period."),
+        ("💰 Price Quality", "10%",
+         "Weighted blend of the GCC unit export value level (70%) and its CAGR (30%). "
+         "Rewards commodities where GCC exports at a premium price with improving trajectory."),
+    ]
+
+    hdr1, hdr2, hdr3 = st.columns([2, 1, 5])
+    hdr1.markdown("**Component**")
+    hdr2.markdown("**Weight**")
+    hdr3.markdown("**What it measures**")
+    st.markdown("<hr style='margin:4px 0 10px;border-color:#e2e8f0'>", unsafe_allow_html=True)
+    for comp, wt, desc in score_rows:
+        c1, c2, c3 = st.columns([2, 1, 5])
+        c1.markdown(f"**{comp}**")
+        c2.markdown(
+            f"<span style='background:#e8f0fe;color:#1a3a5c;border-radius:20px;"
+            f"padding:2px 10px;font-weight:700;font-size:0.85rem'>{wt}</span>",
+            unsafe_allow_html=True,
+        )
+        c3.markdown(f"<span style='color:#4a5568;font-size:0.9rem'>{desc}</span>",
+                    unsafe_allow_html=True)
+        st.markdown("<hr style='margin:6px 0;border-color:#f0f4f8'>", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── Data sources ─────────────────────────────────────────────────────────
+    st.markdown("## Data Sources")
+    src_cols = st.columns(3)
+    sources = [
+        ("UN Comtrade", "Trade flows at HS4 level, 2015–2024, annual frequency across 40 reporting countries."),
+        ("World Bank LPI 2023", "Logistics Performance Index scores used in the landing cost sub-component."),
+        ("WITS / UNCTAD TRAINS", "MFN applied tariff rates at HS6, aggregated to HS2 by destination country."),
+        ("World Bank Open Data", "Country viability indicators covering governance, economics, and infrastructure (2021–2023)."),
+        ("CEPII GeoDist", "Capital-to-capital and weighted geographic distance matrix used for transport mode rules."),
+        ("OCO Global", "Analytical framework, sector prioritisation criteria, and strategic scope definition."),
+    ]
+    for i, (src, desc) in enumerate(sources):
+        with src_cols[i % 3]:
+            st.markdown(
+                f"<div style='background:#f8f9fb;border:1px solid #e8ecf1;border-radius:10px;"
+                f"padding:14px 16px;margin-bottom:12px;'>"
+                f"<div style='font-weight:700;color:#0f2847;font-size:0.9rem;margin-bottom:4px'>{src}</div>"
+                f"<div style='color:#4a5568;font-size:0.82rem;line-height:1.5'>{desc}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+    st.markdown(
+        "<div style='text-align:center;color:#a0aec0;font-size:0.78rem;margin-top:1.5rem'>"
+        "Built by Georges Elkassouf &amp; Joseph Hobeika · AUB MSBA · Spring 2026 · in partnership with OCO Global"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # OPPORTUNITY FINDER
 # ═══════════════════════════════════════════════════════════════════════════
-if page == "Opportunity Finder":
+elif page == "Opportunity Finder":
     st.title("Opportunity Finder")
     st.markdown(
         "Pick a **GCC exporter** and a **commodity** — the dashboard surfaces "
@@ -613,10 +771,9 @@ elif page == "Executive Summary":
         opp.sort_values("opportunity_score", ascending=False)
         .groupby("gcc_country").first().reset_index()
     )
-    display = top1[["gcc_country", "dest_country", "commodity", "opportunity_score", "grade"]].copy()
-    display.columns = ["GCC Exporter", "Best Target", "Top Commodity", "Score", "Grade"]
-    display["Top Commodity"] = display["Top Commodity"].str[:55]
-    display["Score"] = display["Score"].round(3)
+    display = top1[["gcc_country", "dest_country", "commodity"]].copy()
+    display.columns = ["GCC Exporter", "Best Target Market", "Top Export Commodity"]
+    display["Top Export Commodity"] = display["Top Export Commodity"].str[:60]
     st.dataframe(display, use_container_width=True, hide_index=True)
 
     # Trend charts
@@ -634,9 +791,18 @@ elif page == "Executive Summary":
         with col_r:
             st.subheader("Annual Combined GCC Non-Fuel Export Value (2015–2024)")
             st.caption("Total non-fuel exports from all 6 GCC member states to the 40 destination markets.")
-            yearly["g_B"] = yearly["total_gcc_exports"] / 1e9
+            _max_gcc = float(yearly["total_gcc_exports"].max())
+            if _max_gcc >= 1e12:
+                yearly["g_scaled"] = yearly["total_gcc_exports"] / 1e12
+                _gcc_unit = "USD (Trillions)"
+            elif _max_gcc >= 1e9:
+                yearly["g_scaled"] = yearly["total_gcc_exports"] / 1e9
+                _gcc_unit = "USD (Billions)"
+            else:
+                yearly["g_scaled"] = yearly["total_gcc_exports"] / 1e6
+                _gcc_unit = "USD (Millions)"
             st.plotly_chart(
-                area_chart(yearly["year"], yearly["g_B"], "#FF6B35", "USD (Billions)"),
+                area_chart(yearly["year"], yearly["g_scaled"], "#FF6B35", _gcc_unit),
                 use_container_width=True,
             )
 
@@ -670,8 +836,8 @@ elif page == "Market Demand":
         x=yearly["year"], y=yearly["d_T"],
         name="Import Demand (USD T)",
         marker=dict(color=yearly["d_T"], colorscale=BLUE_SCALE, cornerradius=4, line=dict(width=0)),
-        text=[f"${v:.1f}T" for v in yearly["d_T"]], textposition="outside",
-        textfont=dict(size=10, color="#1a3a5c"),
+        text=[f"${v:.2f}T" for v in yearly["d_T"]], textposition="outside",
+        textfont=dict(size=12, color="#0f2847", family="system-ui, sans-serif"),
         hovertemplate="%{x}<br>Demand: $%{y:.2f}T<extra></extra>",
         yaxis="y1",
     ))
@@ -689,14 +855,27 @@ elif page == "Market Demand":
     ))
     fig_demand.update_layout(
         **CHART_LAYOUT,
-        margin=dict(t=20, b=30, l=10, r=60), height=380,
-        yaxis=dict(title="USD (Trillions)", gridcolor="rgba(0,0,0,0.05)", side="left"),
-        yaxis2=dict(title="YoY Growth (%)", overlaying="y", side="right",
-                    showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.15)",
-                    ticksuffix="%"),
-        xaxis=dict(title="", showgrid=False),
-        legend=dict(orientation="h", y=1.08, x=0),
-        bargap=0.3,
+        margin=dict(t=30, b=40, l=10, r=80), height=420,
+        yaxis=dict(
+            title="USD (Trillions)", gridcolor="rgba(0,0,0,0.05)", side="left",
+            tickformat=".1f", ticksuffix="T",
+            tickfont=dict(size=12, color="#1a3a5c"),
+            title_font=dict(size=12),
+        ),
+        yaxis2=dict(
+            title="YoY Growth (%)", overlaying="y", side="right",
+            showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.2)",
+            zerolinewidth=1.5,
+            ticksuffix="%", tickformat="+.1f",
+            tickfont=dict(size=12, color="#c4420a"),
+            title_font=dict(size=12, color="#c4420a"),
+        ),
+        xaxis=dict(
+            title="", showgrid=False,
+            tickfont=dict(size=12), dtick=1,
+        ),
+        legend=dict(orientation="h", y=1.1, x=0, font=dict(size=12)),
+        bargap=0.28,
     )
     st.plotly_chart(fig_demand, use_container_width=True)
 
