@@ -345,22 +345,11 @@ if page == "Opportunity Finder":
         "the highest-potential destination markets ranked by a composite opportunity score."
     )
     st.markdown(
-        """
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px;">
-            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
-                         font-size:0.78rem;font-weight:600;">📈 Demand Forecast &nbsp;<b>25%</b></span>
-            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
-                         font-size:0.78rem;font-weight:600;">🎯 Penetration Gap &nbsp;<b>20%</b></span>
-            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
-                         font-size:0.78rem;font-weight:600;">🏛️ Country Viability &nbsp;<b>20%</b></span>
-            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
-                         font-size:0.78rem;font-weight:600;">🚢 Landing Cost &nbsp;<b>15%</b></span>
-            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
-                         font-size:0.78rem;font-weight:600;">🤖 ML Growth Signal &nbsp;<b>10%</b></span>
-            <span style="background:#e8f0fe;color:#1a3a5c;border-radius:20px;padding:3px 12px;
-                         font-size:0.78rem;font-weight:600;">💰 Price Quality &nbsp;<b>10%</b></span>
-        </div>
-        """,
+        "<p style='font-size:1rem;font-weight:700;color:#1a3a5c;margin:4px 0 14px;line-height:1.8;'>"
+        "Score &nbsp;=&nbsp; Demand Forecast (25%) &nbsp;+&nbsp; Penetration Gap (20%) "
+        "&nbsp;+&nbsp; Country Viability (20%) &nbsp;+&nbsp; Landing Cost (15%) "
+        "&nbsp;+&nbsp; ML Growth Signal (10%) &nbsp;+&nbsp; Price Quality (10%)"
+        "</p>",
         unsafe_allow_html=True,
     )
 
@@ -369,7 +358,7 @@ if page == "Opportunity Finder":
         st.error("Missing: **opportunity_rankings_full.csv**. Place it into `data/`.")
         st.stop()
 
-    col_gcc, col_search = st.columns([1, 2])
+    col_gcc, col_cmd = st.columns([1, 2])
     with col_gcc:
         gcc_sel = st.selectbox("GCC Exporter", sorted(opp["gcc_country"].unique()))
 
@@ -381,15 +370,15 @@ if page == "Opportunity Finder":
     cmd_labels = cmd_scores.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     cmd_code_map = dict(zip(cmd_labels, cmd_scores["cmdCode"]))
 
-    with col_search:
-        search = st.text_input("🔍 Filter commodities", "", placeholder="e.g. plastic, aluminium, dairy...")
-    if search.strip():
-        cmd_labels = [l for l in cmd_labels if search.strip().lower() in l.lower()]
+    with col_cmd:
+        cmd_sel = st.selectbox(
+            "🔍 Commodity (type to search)",
+            cmd_labels,
+            help="Start typing a keyword — e.g. plastic, aluminium, dairy — to filter the list.",
+        )
     if not cmd_labels:
-        st.warning("No commodities match your search.")
+        st.warning("No commodities found for this GCC country.")
         st.stop()
-
-    cmd_sel = st.selectbox("Commodity", cmd_labels)
     sel_code = cmd_code_map[cmd_sel]
     df = df_gcc[df_gcc["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
     if df.empty:
@@ -511,11 +500,10 @@ elif page == "Executive Summary":
     total_demand = yearly.loc[yearly["year"] == latest_yr, "total_demand"].iloc[0] if yearly is not None else 0
     total_gcc = yearly.loc[yearly["year"] == latest_yr, "total_gcc_exports"].iloc[0] if yearly is not None else 0
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     c1.metric("Addressable Import Demand", fmt_usd(total_demand), f"{latest_yr}")
     c2.metric("GCC Non-Fuel Exports", fmt_usd(total_gcc), f"{latest_yr}")
     c3.metric("Scored Opportunities", f"{len(opp):,}", f"{opp['dest_country'].nunique()} markets")
-    c4.metric("Best Score", f"{opp['opportunity_score'].max():.3f}", "out of 1.000")
 
     st.divider()
     st.subheader("Top Opportunity per GCC Country")
