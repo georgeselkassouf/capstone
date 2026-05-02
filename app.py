@@ -440,14 +440,64 @@ if page == "Opportunity Finder":
     fig.update_xaxes(range=[_x_min, _x_max])
     st.plotly_chart(fig, use_container_width=True)
 
+    # Choropleth map
+    st.subheader(f"Market Attractiveness Map — {gcc_sel} · {commodity_name[:45]}")
+    st.caption("Color intensity reflects the composite opportunity score across all scored destination markets. Grey = outside the 40-market universe.")
+    fig_map = go.Figure(go.Choropleth(
+        locations=df["dest_country"],
+        locationmode="country names",
+        z=df["opportunity_score"],
+        colorscale=BLUE_SCALE,
+        zmin=float(df["opportunity_score"].min()),
+        zmax=float(df["opportunity_score"].max()),
+        hovertemplate="<b>%{location}</b><br>Opportunity Score: %{z:.3f}<extra></extra>",
+        marker_line_color="white",
+        marker_line_width=0.5,
+        colorbar=dict(
+            title=dict(text="Score", font=dict(size=12)),
+            thickness=14, len=0.7,
+            tickformat=".2f",
+        ),
+    ))
+    fig_map.update_layout(
+        **CHART_LAYOUT,
+        geo=dict(
+            showframe=False,
+            showcoastlines=True, coastlinecolor="rgba(0,0,0,0.08)",
+            projection_type="natural earth",
+            bgcolor="rgba(0,0,0,0)",
+            showland=True, landcolor="#f0f4f8",
+            showocean=True, oceancolor="#dce8f5",
+            showcountries=True, countrycolor="rgba(0,0,0,0.08)",
+            lataxis_range=[-55, 80],
+        ),
+        margin=dict(t=10, b=10, l=0, r=0),
+        height=440,
+    )
+    st.plotly_chart(fig_map, use_container_width=True)
+
     # Detail table
     st.divider()
     st.subheader(f"Score Components — Top 15 Target Markets for {gcc_sel} ({commodity_name[:40]})")
+    # Column legend
+    st.markdown("""
+<div style="background:#f4f7fc;border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:0.82rem;color:#1a3a5c;line-height:1.9;">
+<b>Column guide:</b> &nbsp;
+<b>Score</b> — composite opportunity score (0–1, higher = more attractive). &nbsp;·&nbsp;
+<b>Grade</b> — country viability tier (A+/A/B/C/D) based on World Bank governance & economic indicators. &nbsp;·&nbsp;
+<b>4Y Demand</b> — total forecasted import demand for this commodity in that market over 2025–2028. &nbsp;·&nbsp;
+<b>Entry Room</b> — how much market share GCC has yet to capture (1 − current GCC share; higher = more room). &nbsp;·&nbsp;
+<b>ML Growth P</b> — Random Forest + XGBoost probability (0–1) that this market will show above-median structural growth. &nbsp;·&nbsp;
+<b>LPI</b> — World Bank Logistics Performance Index score (1–5) for the destination; higher = easier to ship to. &nbsp;·&nbsp;
+<b>Tariff %</b> — MFN applied tariff rate (%) faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
+<b>Transport</b> — recommended shipping mode based on distance, LPI, and commodity weight.
+</div>
+    """, unsafe_allow_html=True)
+
     col_map = {
         "dest_country": "Target Market", "opportunity_score": "Score", "grade": "Grade",
-        "demand_4y_total": "4Y Demand", "penetration_pct": "GCC Pen %",
+        "demand_4y_total": "4Y Demand",
         "pen_opportunity": "Entry Room", "ml_growth_prob": "ML Growth P",
-        "uv_mean": "UV ($/kg)", "uv_cagr": "Price CAGR %",
         "lpi_score": "LPI", "mfn_tariff_rate": "Tariff %",
         "weighted_dist_km": "Distance (km)", "dist_km": "Distance (km)",
         "recommended_transport": "Transport", "opportunity_rationale": "Rationale",
@@ -473,6 +523,32 @@ if page == "Opportunity Finder":
     if "Rationale" in table.columns:
         table["Rationale"] = table["Rationale"].str[:90]
     st.dataframe(table, use_container_width=True, hide_index=True, height=min(620, len(df_top) * 42 + 50))
+
+    # Commodity-level metrics (same across all destinations — shown as cards, not table columns)
+    st.markdown("#### Commodity-Level Characteristics *(constant across all destination markets)*")
+    st.caption("These values describe the commodity itself rather than a specific destination, so they are the same for every row in the table above.")
+    ci1, ci2, ci3 = st.columns(3)
+    if "penetration_pct" in df_top.columns:
+        avg_pen = float(df_top["penetration_pct"].mean())
+        ci1.metric(
+            "Avg GCC Penetration (across top 15)",
+            f"{avg_pen:.1f}%",
+            "share of destination import demand captured by GCC",
+        )
+    if "uv_mean" in df_top.columns:
+        uv_val = float(df_top["uv_mean"].iloc[0]) if not df_top["uv_mean"].isna().all() else None
+        ci2.metric(
+            f"Unit Value — {commodity_name[:30]}",
+            f"${uv_val:,.2f} /kg" if uv_val else "—",
+            "avg GCC export price per kg (price quality signal)",
+        )
+    if "uv_cagr" in df_top.columns:
+        cagr_val = float(df_top["uv_cagr"].iloc[0]) if not df_top["uv_cagr"].isna().all() else None
+        ci3.metric(
+            "Unit Value CAGR",
+            f"{cagr_val:.1f}%" if cagr_val is not None else "—",
+            "compound annual growth rate of GCC export price",
+        )
 
     # Rationale expander
     if "opportunity_rationale" in df_top.columns:
@@ -583,54 +659,130 @@ elif page == "Market Demand":
     yearly["d_B"] = yearly["world_demand"] / 1e9
 
     st.subheader("Annual Combined Import Demand Across 40 Destination Markets (2015–2024)")
-    fig = go.Figure()
+    st.caption("Bar = total import value (left axis, USD Trillions). Line = year-on-year growth rate (right axis, %). The 2019→2020 dip reflects COVID-19 trade contraction.")
     yearly["d_T"] = yearly["world_demand"] / 1e12
-    fig.add_trace(go.Bar(
+    yearly = yearly.sort_values("year").reset_index(drop=True)
+    yearly["yoy_growth"] = yearly["d_T"].pct_change() * 100
+
+    fig_demand = go.Figure()
+    # Bars coloured by value
+    fig_demand.add_trace(go.Bar(
         x=yearly["year"], y=yearly["d_T"],
+        name="Import Demand (USD T)",
         marker=dict(color=yearly["d_T"], colorscale=BLUE_SCALE, cornerradius=4, line=dict(width=0)),
         text=[f"${v:.1f}T" for v in yearly["d_T"]], textposition="outside",
-        textfont=dict(size=11, color="#1a3a5c"),
-        hovertemplate="%{x}<br>$%{y:.2f}T<extra></extra>",
+        textfont=dict(size=10, color="#1a3a5c"),
+        hovertemplate="%{x}<br>Demand: $%{y:.2f}T<extra></extra>",
+        yaxis="y1",
     ))
-    fig.update_layout(**CHART_LAYOUT, margin=dict(t=10, b=30), height=340,
-                      yaxis=dict(title="USD (Trillions)", gridcolor="rgba(0,0,0,0.05)"),
-                      xaxis=dict(title=""))
-    fig.update_xaxes(showgrid=False)
-    st.plotly_chart(fig, use_container_width=True)
+    # YoY growth line on secondary axis
+    fig_demand.add_trace(go.Scatter(
+        x=yearly["year"], y=yearly["yoy_growth"],
+        name="YoY Growth %",
+        mode="lines+markers+text",
+        line=dict(color="#FF6B35", width=2.5, dash="dot"),
+        marker=dict(size=7, color="#FF6B35", line=dict(color="white", width=1.5)),
+        text=[f"{v:+.1f}%" if pd.notna(v) else "" for v in yearly["yoy_growth"]],
+        textposition="top center", textfont=dict(size=9, color="#c4420a"),
+        hovertemplate="%{x}<br>YoY Growth: %{y:+.1f}%<extra></extra>",
+        yaxis="y2",
+    ))
+    fig_demand.update_layout(
+        **CHART_LAYOUT,
+        margin=dict(t=20, b=30, l=10, r=60), height=380,
+        yaxis=dict(title="USD (Trillions)", gridcolor="rgba(0,0,0,0.05)", side="left"),
+        yaxis2=dict(title="YoY Growth (%)", overlaying="y", side="right",
+                    showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.15)",
+                    ticksuffix="%"),
+        xaxis=dict(title="", showgrid=False),
+        legend=dict(orientation="h", y=1.08, x=0),
+        bargap=0.3,
+    )
+    st.plotly_chart(fig_demand, use_container_width=True)
 
-    # Top 20 commodities
+    # Top 20 commodities + connected trend
     st.divider()
-    st.subheader("Top 20 Most-Imported Commodity Sectors Across All 40 Destination Markets (2015–2024)")
-    st.caption("Ranked by total import value summed across all years. Fuels (HS27), precious stones (HS71), arms (HS93), and unclassified goods (HS99) are excluded.")
+    st.subheader("Top 20 Most-Imported Commodity Sectors — Click to Explore Trend")
+    st.caption("Ranked by total import value (2015–2024). Select a commodity from the list below the chart to see its historical demand trend.")
+
     top_cmd = (
         pen.groupby(["cmdCode", "commodity"])["world_demand"]
         .sum().reset_index().sort_values("world_demand", ascending=False).head(20)
     )
     top_cmd["label"] = top_cmd["cmdCode"].astype(str) + " — " + top_cmd["commodity"].str[:45]
     top_cmd["d_B"] = top_cmd["world_demand"] / 1e9
-    fig2 = hbar(
-        top_cmd["label"], top_cmd["d_B"], colorscale=TEAL_SCALE,
-        text_fmt=[f"${v:.1f}B" for v in top_cmd["d_B"]],
-        height=560, x_title="USD (Billions)",
-    )
-    st.plotly_chart(fig2, use_container_width=True)
 
-    # Single commodity trend
-    st.divider()
-    st.subheader("Historical Import Demand Trend by Commodity (2015–2024)")
-    st.caption("Select any commodity below to see how global import demand evolved across the 40 destination markets.")
-    cmd_opts = pen.groupby(["cmdCode", "commodity"])["world_demand"].sum().reset_index().sort_values("world_demand", ascending=False)
-    labels = cmd_opts.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
-    code_map = dict(zip(labels, cmd_opts["cmdCode"]))
-    selected = st.selectbox("Select a commodity", labels[:80])
-    sel_code = code_map[selected]
-    trend = pen[pen["cmdCode"] == sel_code].groupby("year")["world_demand"].sum().reset_index()
-    trend["d_B"] = trend["world_demand"] / 1e9
-    cname = pen.loc[pen["cmdCode"] == sel_code, "commodity"].iloc[0]
-    st.plotly_chart(
-        line_chart(trend["year"], trend["d_B"], "#0F4C75", "USD (Billions)", cname),
-        use_container_width=True,
+    # Commodity selector — pre-filled with the top 20 in the same order as the chart
+    sel_trend_label = st.selectbox(
+        "🔍 Select commodity to view its demand trend (defaults to #1)",
+        top_cmd["label"].tolist(),
+        index=0,
+        key="md_trend_sel",
     )
+    sel_trend_code = top_cmd.loc[top_cmd["label"] == sel_trend_label, "cmdCode"].iloc[0]
+    sel_trend_name = top_cmd.loc[top_cmd["label"] == sel_trend_label, "commodity"].iloc[0]
+
+    # Colour the selected bar in orange, others in teal
+    bar_colors = [
+        "#FF6B35" if lbl == sel_trend_label else "#1B9AAA"
+        for lbl in top_cmd["label"]
+    ]
+    fig_top20 = go.Figure()
+    fig_top20.add_trace(go.Bar(
+        y=top_cmd["label"], x=top_cmd["d_B"], orientation="h",
+        marker=dict(color=bar_colors, cornerradius=4, line=dict(width=0)),
+        text=[f"${v:.1f}B" for v in top_cmd["d_B"]], textposition="outside",
+        textfont=dict(size=11, color="#1a3a5c"),
+        hovertemplate="<b>%{y}</b><br>$%{x:.1f}B<extra></extra>",
+    ))
+    h20 = max(380, len(top_cmd) * 34)
+    fig_top20.update_layout(
+        **CHART_LAYOUT,
+        margin=dict(t=10, b=30, l=10, r=70), height=h20,
+        yaxis=dict(autorange="reversed", tickfont=dict(size=12), showgrid=False),
+        xaxis=dict(title="Total Import Value 2015–2024 (USD Billions)",
+                   gridcolor="rgba(0,0,0,0.05)"),
+    )
+    st.plotly_chart(fig_top20, use_container_width=True)
+
+    # Trend for selected commodity
+    st.markdown(f"#### Import Demand Trend — {sel_trend_name}")
+    trend = pen[pen["cmdCode"] == sel_trend_code].groupby("year")["world_demand"].sum().reset_index()
+    trend["d_B"] = trend["world_demand"] / 1e9
+    trend = trend.sort_values("year")
+    trend["yoy"] = trend["d_B"].pct_change() * 100
+
+    fig_trend = go.Figure()
+    fig_trend.add_trace(go.Scatter(
+        x=trend["year"], y=trend["d_B"], mode="lines+markers",
+        name="Import Demand",
+        line=dict(color="#0F4C75", width=2.5),
+        marker=dict(size=7, color="#0F4C75", line=dict(color="white", width=1.5)),
+        hovertemplate="%{x}<br>Demand: $%{y:.1f}B<extra></extra>",
+        yaxis="y1",
+    ))
+    fig_trend.add_trace(go.Bar(
+        x=trend["year"], y=trend["yoy"],
+        name="YoY Growth %",
+        marker=dict(
+            color=["#D62828" if (v < 0) else "#2e86de" for v in trend["yoy"].fillna(0)],
+            opacity=0.35, cornerradius=3, line=dict(width=0),
+        ),
+        hovertemplate="%{x}<br>Growth: %{y:+.1f}%<extra></extra>",
+        yaxis="y2",
+    ))
+    fig_trend.update_layout(
+        **CHART_LAYOUT,
+        margin=dict(t=20, b=30, l=10, r=60), height=320,
+        yaxis=dict(title="USD (Billions)", gridcolor="rgba(0,0,0,0.05)"),
+        yaxis2=dict(title="YoY Growth (%)", overlaying="y", side="right",
+                    showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.2)",
+                    ticksuffix="%"),
+        xaxis=dict(title="", showgrid=False),
+        legend=dict(orientation="h", y=1.08, x=0),
+        barmode="overlay",
+    )
+    st.plotly_chart(fig_trend, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
