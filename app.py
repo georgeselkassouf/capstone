@@ -644,16 +644,16 @@ elif page == "Opportunity Finder":
     df_gcc = opp[opp["gcc_country"] == gcc_sel].copy()
 
     # Only show commodities where this GCC country has actual exports.
-    exported_cmds = (
-        df_gcc[df_gcc["penetration_pct"] > 0]["cmdCode"].unique()
-    )
+    exported_cmds = df_gcc[df_gcc["penetration_pct"] > 0]["cmdCode"].unique()
     df_gcc_exported = df_gcc[df_gcc["cmdCode"].isin(exported_cmds)]
 
     cmd_scores = (
         df_gcc_exported.groupby(["cmdCode", "commodity"])["opportunity_score"]
         .max().reset_index().sort_values("opportunity_score", ascending=False)
     )
-    cmd_labels = cmd_scores.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
+    cmd_labels = cmd_scores.apply(
+        lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1
+    ).tolist()
     cmd_code_map = dict(zip(cmd_labels, cmd_scores["cmdCode"]))
 
     if not cmd_labels:
@@ -694,10 +694,15 @@ elif page == "Opportunity Finder":
             key=f"cmd_sel_{gcc_sel}"
         )
 
-    cmd_sel = cmd_sel[0] if cmd_sel else cmd_labels[0]
+    # Use .get() to avoid KeyError
+    sel_code = cmd_code_map_filtered.get(cmd_sel)
+    if sel_code is None:
+        st.error("Selected commodity not found in mapping. Please refresh the page.")
+        st.stop()
 
-    sel_code = cmd_code_map_filtered[cmd_sel]
-    df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
+    df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values(
+        "opportunity_score", ascending=False
+    ).copy()
     if df.empty:
         st.info("No scored opportunities for this combination.")
         st.stop()
@@ -714,16 +719,12 @@ elif page == "Opportunity Finder":
         "scored markets",
     )
 
-    # GCC Exports for this country + commodity
-    # Strategy: try gcc_export_penetration.csv filtered by gcc_country first;
-    # if that column doesn't exist or yields 0, estimate from penetration_pct * demand
+    # GCC Exports
     pen_data = load("gcc_export_penetration.csv")
     gcc_exp_val = 0
     exp_label = "—"
     exp_year = ""
     if pen_data is not None and "gcc_exports" in pen_data.columns:
-        # pen_scored has no year column — it is a 2022-2023 average.
-        # Filter by gcc_country and cmdCode directly without year.
         exp_year = "2022–2023 avg"
         if "gcc_country" in pen_data.columns:
             cmd_pen = pen_data[
@@ -731,11 +732,10 @@ elif page == "Opportunity Finder":
                 (pen_data["cmdCode"] == sel_code)
             ]
         else:
-            # Fallback: old format without gcc_country column
             cmd_pen = pen_data[pen_data["cmdCode"] == sel_code]
         gcc_exp_val = float(cmd_pen["gcc_exports"].sum()) if not cmd_pen.empty else 0
 
-    # If still 0, estimate from penetration_pct × demand_4y_total / 4 (annual proxy)
+    # Fallback estimate
     if gcc_exp_val == 0 and "penetration_pct" in df.columns and "demand_4y_total" in df.columns:
         avg_pen = float(df["penetration_pct"].mean()) / 100.0
         total_demand_annual = float(df["demand_4y_total"].sum()) / 4.0
@@ -769,7 +769,6 @@ elif page == "Opportunity Finder":
         text_fmt=[f"{v:.3f}" for v in df_top["opportunity_score"]],
         x_title="Opportunity Score",
     )
-    # Zoom x-axis: start just below the lowest score so differences are legible
     _scores = df_top["opportunity_score"]
     _spread = float(_scores.max() - _scores.min())
     _pad = max(_spread * 0.5, 0.01)
@@ -791,19 +790,13 @@ elif page == "Opportunity Finder":
         hovertemplate="<b>%{location}</b><br>Opportunity Score: %{z:.3f}<extra></extra>",
         marker_line_color="white",
         marker_line_width=0.5,
-        colorbar=dict(
-            title=dict(text="Score", font=dict(size=12)),
-            thickness=14, len=0.7,
-            tickformat=".2f",
-        ),
+        colorbar=dict(title=dict(text="Score", font=dict(size=12)), thickness=14, len=0.7),
     ))
     fig_map.update_layout(
         **CHART_LAYOUT,
         geo=dict(
-            showframe=False,
-            showcoastlines=True, coastlinecolor="rgba(0,0,0,0.08)",
-            projection_type="natural earth",
-            bgcolor="rgba(0,0,0,0)",
+            showframe=False, showcoastlines=True, coastlinecolor="rgba(0,0,0,0.08)",
+            projection_type="natural earth", bgcolor="rgba(0,0,0,0)",
             showland=True, landcolor="#f0f4f8",
             showocean=True, oceancolor="#dce8f5",
             showcountries=True, countrycolor="rgba(0,0,0,0.08)",
