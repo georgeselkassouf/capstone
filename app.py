@@ -622,7 +622,7 @@ elif page == "Opportunity Finder":
 
     with col_cmd:
         cmd_sel = st.selectbox(
-            "🔍 Search or select commodity — sorted by opportunity score ↓",
+            "🔍 Search or select commodity",
             cmd_labels,
             index=0,
             key=f"cmd_sel_{gcc_sel}",
