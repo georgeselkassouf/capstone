@@ -661,17 +661,42 @@ elif page == "Opportunity Finder":
         st.stop()
 
     with col_cmd:
-        cmd_sel = st.multiselect(
-            "🔍 Search or select commodity",
-            cmd_labels,
-            default=[cmd_labels[0]],
-            max_selections=1,
+        search_term = st.text_input(
+            "🔍 Search commodity",
+            placeholder="Type to filter (e.g. steel, plastic, clock...)",
+            key=f"search_{gcc_sel}"
+        )
+    
+        # Filter based on search
+        if search_term:
+            filtered = cmd_scores[
+                cmd_scores["commodity"].str.contains(search_term, case=False, na=False)
+            ]
+        else:
+            filtered = cmd_scores
+    
+        # Build labels
+        filtered_labels = filtered.apply(
+            lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}",
+            axis=1
+        ).tolist()
+    
+        cmd_code_map_filtered = dict(zip(filtered_labels, filtered["cmdCode"]))
+    
+        if not filtered_labels:
+            st.warning("No matching commodities found.")
+            st.stop()
+    
+        cmd_sel = st.selectbox(
+            "Select commodity",
+            filtered_labels,
+            index=0,
             key=f"cmd_sel_{gcc_sel}"
         )
 
     cmd_sel = cmd_sel[0] if cmd_sel else cmd_labels[0]
 
-    sel_code = cmd_code_map[cmd_sel]
+    sel_code = cmd_code_map_filtered[cmd_sel]
     df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
     if df.empty:
         st.info("No scored opportunities for this combination.")
