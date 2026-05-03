@@ -2,7 +2,7 @@
 
 **Predicting Export Market Growth & Price Potential to Support Strategic Trade Diversification**
 
-An interactive Streamlit dashboard that helps consultants identify the most attractive non-fuel export opportunities for GCC countries across 34+ destination markets and hundreds of HS4 commodities.
+An interactive Streamlit dashboard that helps consultants identify the most attractive non-fuel export opportunities for GCC countries across 40 destination markets and hundreds of HS4 commodities.
 
 Built for **OCO Global** as part of the AUB MSBA Capstone Project by Georges Elkassouf & Joseph Hobeika.
 
@@ -20,7 +20,7 @@ The app requires **three CSV files** in the `data/` directory. All scoring compo
 
 ```
 data/
-  gcc_export_penetration.csv          # GCC-aggregate penetration panel (all 6 members combined)
+  gcc_export_penetration.csv          # Per-GCC-country × destination × HS4 commodity penetration (2022–2023 avg)
   demand_forecast_global.csv          # Holt-Winters 4-year global demand forecasts
   opportunity_rankings_full.csv       # Full composite opportunity scores (main dashboard feed)
 ```
@@ -53,7 +53,7 @@ streamlit run app.py
 | **Opportunity Finder** | **Main tool** — pick a GCC country + commodity, see top destination markets ranked by composite score |
 | **Executive Summary** | Total addressable demand, combined GCC export size, best opportunity per country |
 | **Market Demand** | Which commodities have the highest import demand across the 40 destination countries? |
-| **GCC Penetration** | Where does GCC already penetrate? Where are the whitespace gaps? (aggregate across all 6 GCC members) |
+| **GCC Penetration** | Where does GCC already penetrate? Where are the whitespace gaps? (aggregated across all 6 GCC members and all 40 destination markets) |
 | **Demand Forecasts** | Holt-Winters 4-year demand projections with confidence bands per commodity; filterable by GCC exporter to surface the most relevant commodities |
 
 ---
@@ -65,7 +65,7 @@ The composite opportunity score is a weighted sum of six sub-scores, each normal
 | Component | Weight | Source |
 | --- | --- | --- |
 | Demand Forecast (4-year total) | **25%** | Pre-computed by notebook — `demand_4y_total` column in `opportunity_rankings_full.csv` |
-| Penetration Gap (1 − current GCC share) | **20%** | `pen_opportunity` column in `opportunity_rankings_full.csv` |
+| Penetration Gap (1 − current GCC share) | **20%** | `pen_opportunity` column in `opportunity_rankings_full.csv` — based on 2022–2023 avg per-GCC-country penetration |
 | Country Viability (World Bank composite) | **20%** | `grade` / viability score columns in `opportunity_rankings_full.csv` |
 | Landing Cost Index (MFN tariff + LPI) | **15%** | `mfn_tariff_rate` + `lpi_score` columns in `opportunity_rankings_full.csv` |
 | ML Growth Signal | **10%** | Random Forest + XGBoost ensemble — `ml_growth_prob` column in `opportunity_rankings_full.csv` |
@@ -78,30 +78,31 @@ Exclusions applied before scoring: re-exports, fuels (HS27), precious stones (HS
 ## Key Data Schemas
 
 ### `gcc_export_penetration.csv`
-Aggregated across all 6 GCC member states (UAE, Saudi Arabia, Qatar, Kuwait, Oman, Bahrain).
+Per GCC member state × destination country × HS4 commodity. A 2022–2023 average (no year column). Self-exclusion applied (e.g. UAE is not a destination for UAE). Re-exports filtered before calculation.
 
 | Column | Description |
 | --- | --- |
-| `cmdCode` | HS2 commodity code |
-| `year` | Reporting year (2015–2024) |
-| `world_demand` | Total import demand across destination markets (USD) |
-| `commodity` | HS2 commodity description |
-| `gcc_exports` | Combined GCC exports to destination markets (USD) |
-| `penetration_pct` | `gcc_exports / world_demand × 100` |
+| `gcc_country` | GCC exporter (one of the 6 member states) |
+| `dest_country` | Destination market |
+| `cmdCode` | HS4 commodity code |
+| `commodity` | HS4 commodity description |
+| `gcc_exports` | Avg (2022–2023) GCC country exports to destination (USD) |
+| `world_demand` | Avg (2022–2023) destination total imports from world (USD) |
+| `penetration_pct` | `gcc_exports / world_demand × 100` — capped at 100% |
 
 ### `demand_forecast_global.csv`
 
 | Column | Description |
 | --- | --- |
-| `cmdCode` | HS2 commodity code |
-| `commodity` | HS2 commodity description |
+| `cmdCode` | HS4 commodity code |
+| `commodity` | HS4 commodity description |
 | `year` | Forecast year (2025–2028) |
 | `demand_ensemble` | Holt-Winters point forecast (USD) |
 | `ci_lower` | Lower confidence bound |
 | `ci_upper` | Upper confidence bound |
 
 ### `opportunity_rankings_full.csv`
-One row per GCC exporter × destination country × HS2 commodity combination. All scoring sub-components are pre-computed and embedded here.
+One row per GCC exporter × destination country × HS4 commodity combination. All scoring sub-components are pre-computed and embedded here.
 
 Key columns: `gcc_country`, `cmdCode`, `commodity`, `dest_country`, `opportunity_score`, `grade`, `demand_4y_total`, `penetration_pct`, `pen_opportunity`, `ml_growth_prob`, `uv_mean`, `uv_cagr`, `weighted_dist_km`, `dist_km`, `lpi_score`, `mfn_tariff_rate`, `recommended_transport`, `opportunity_rationale`.
 
