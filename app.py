@@ -406,7 +406,7 @@ if page == "Home":
          "5% market share — the clearest signal of untapped diversification potential."),
         ("#D62828", "📉", "Demand Forecasts",
          "4-year projections (2025–2028)",
-         "Holt-Winters forecasts with 95% confidence intervals per commodity, filterable by GCC "
+         "Holt-Winters forecasts per commodity, filterable by GCC "
          "exporter. Includes a projected demand table and a ranking of top forecast opportunities."),
     ]
 
@@ -580,10 +580,6 @@ if page == "Home":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Opportunity Finder":
     st.title("Opportunity Finder")
-    st.markdown(
-        "Pick a **GCC exporter** and a **commodity** — the dashboard surfaces "
-        "the highest-potential destination markets ranked by a composite opportunity score."
-    )
     st.markdown(
         "<p style='font-size:1rem;font-weight:700;color:#1a3a5c;margin:4px 0 14px;line-height:1.8;'>"
         "Score &nbsp;=&nbsp; Demand Forecast (25%) &nbsp;+&nbsp; Penetration Gap (20%) "
@@ -812,19 +808,7 @@ elif page == "Opportunity Finder":
             "compound annual growth rate of GCC export price",
         )
 
-    # Rationale expander
-    if "opportunity_rationale" in df_top.columns:
-        with st.expander("📋 Full scoring rationale for each market"):
-            for _, row in df_top.iterrows():
-                transport = row.get("recommended_transport", "")
-                icon = TRANSPORT_ICONS.get(str(transport), "")
-                st.markdown(
-                    f"**{row['dest_country']}** · Score **{row['opportunity_score']:.3f}** · "
-                    f"Grade {row.get('grade', '—')} · {icon} {transport}")
-                raw_rat = row.get("opportunity_rationale", "—") or "—"
-                clean_rat = re.sub(r'\s*\([^)]*\)', '', str(raw_rat)).strip()
-                st.caption(clean_rat)
-                st.markdown("---")
+
 
     st.divider()
     dl_cols = [c for c in avail if c in df.columns]
@@ -840,7 +824,6 @@ elif page == "Opportunity Finder":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Executive Summary":
     st.title("Executive Summary")
-    st.markdown("Where should GCC countries focus non-fuel export efforts over the next 3–5 years?")
 
     opp = load_opp()
     if opp is None:
@@ -848,20 +831,20 @@ elif page == "Executive Summary":
         st.stop()
     yearly = derive_yearly()
 
-    latest_yr = int(yearly["year"].max()) if yearly is not None else "—"
-    total_demand = yearly.loc[yearly["year"] == latest_yr, "total_demand"].iloc[0] if yearly is not None else 0
-    total_gcc = yearly.loc[yearly["year"] == latest_yr, "total_gcc_exports"].iloc[0] if yearly is not None else 0
+    kpi_yr = 2023
+    total_demand = yearly.loc[yearly["year"] == kpi_yr, "total_demand"].iloc[0] if yearly is not None and kpi_yr in yearly["year"].values else 0
+    total_gcc = yearly.loc[yearly["year"] == kpi_yr, "total_gcc_exports"].iloc[0] if yearly is not None and kpi_yr in yearly["year"].values else 0
 
     c1, c2 = st.columns(2)
     c1.metric(
         "Total Import Demand — 40 Destinations",
         fmt_usd(total_demand),
-        f"across all HS2 sectors, {latest_yr}",
+        f"across all HS4 sectors, {kpi_yr}",
     )
     c2.metric(
         "Combined GCC Non-Fuel Exports",
         fmt_usd(total_gcc),
-        f"all 6 GCC members combined, {latest_yr}",
+        f"all 6 GCC members combined, {kpi_yr}",
     )
 
     st.divider()
@@ -911,7 +894,6 @@ elif page == "Executive Summary":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Market Demand":
     st.title("Destination Market Demand")
-    st.markdown("What do the 40 destination countries import — and which commodities matter most?")
 
     pen = require("gcc_export_penetration.csv")
 
@@ -1056,7 +1038,6 @@ elif page == "Market Demand":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "GCC Penetration":
     st.title("GCC Export Penetration")
-    st.markdown("**Penetration %** = Combined GCC exports / destination import demand. Low penetration + high demand = opportunity. Figures aggregate all 6 GCC member states.")
 
     pen = require("gcc_export_penetration.csv")
 
@@ -1120,16 +1101,10 @@ elif page == "GCC Penetration":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Demand Forecasts":
     st.title("4-Year Import Demand Forecasts (2025–2028)")
-    st.markdown("Holt-Winters exponential smoothing forecasts of global import demand per commodity sector, trained on 2015–2024 historical data.")
 
     files = require("demand_forecast_global.csv", "gcc_export_penetration.csv")
     fc = files["demand_forecast_global.csv"]
     pen = files["gcc_export_penetration.csv"]
-
-    if "year" in pen.columns:
-        hist = pen.groupby(["cmdCode", "commodity", "year"])["world_demand"].sum().reset_index()
-    else:
-        hist = pd.DataFrame(columns=["cmdCode", "commodity", "year", "world_demand"])
 
     opp_fc = load_opp()
     col_gcc_fc, col_spacer = st.columns([1, 2])
@@ -1174,47 +1149,86 @@ elif page == "Demand Forecasts":
     selected = st.selectbox("🔍 Search or select a commodity", labels)
     sel_code = code_map[selected]
 
-    h = hist[hist["cmdCode"] == sel_code].sort_values("year")
     f = fc[fc["cmdCode"] == sel_code].sort_values("year")
     cname = f["commodity"].iloc[0] if len(f) > 0 else sel_code
 
+    # Load historical per-commodity data if available
+    hist_global = load("demand_history_global.csv")
+    if hist_global is not None:
+        h = hist_global[hist_global["cmdCode"] == sel_code].sort_values("year")
+        h = h.rename(columns={"world_demand_value": "world_demand"})
+    else:
+        h = pd.DataFrame(columns=["year", "world_demand"])
+
     fig = go.Figure()
+
     if not h.empty:
         fig.add_trace(go.Scatter(
-            x=h["year"], y=h["world_demand"], mode="lines+markers", name="Historical",
+            x=h["year"].astype(int), y=h["world_demand"],
+            mode="lines+markers", name="Historical (2015–2024)",
             line=dict(color="#0F4C75", width=2.5),
-            marker=dict(size=7, color="#0F4C75", line=dict(color="white", width=1.5)),
+            marker=dict(size=6, color="#0F4C75", line=dict(color="white", width=1.5)),
+            hovertemplate="<b>%{x}</b><br>Demand: $%{y:,.0f}<extra></extra>",
         ))
-    if not f.empty and not h.empty:
-        bridge_yr = h["year"].max()
-        bv = h.loc[h["year"] == bridge_yr, "world_demand"]
-        if not bv.empty:
-            f_ext = pd.concat([
-                pd.DataFrame({"year": [bridge_yr], "demand_ensemble": [bv.iloc[0]]}),
-                f[["year", "demand_ensemble"]],
-            ], ignore_index=True)
+
+    if not f.empty:
+        # Bridge: connect last historical point to first forecast point
+        if not h.empty:
+            bridge = pd.DataFrame({
+                "year": [int(h["year"].max())],
+                "demand_ensemble": [float(h.loc[h["year"] == h["year"].max(), "world_demand"].iloc[0])]
+            })
+            f_plot = pd.concat([bridge, f[["year", "demand_ensemble"]].assign(year=lambda x: x["year"].astype(int))], ignore_index=True)
         else:
-            f_ext = f[["year", "demand_ensemble"]]
+            f_plot = f[["year", "demand_ensemble"]].assign(year=lambda x: x["year"].astype(int))
+
         fig.add_trace(go.Scatter(
-            x=f_ext["year"], y=f_ext["demand_ensemble"], mode="lines+markers", name="Forecast",
+            x=f_plot["year"], y=f_plot["demand_ensemble"],
+            mode="lines+markers", name="Forecast (2025–2028)",
             line=dict(color="#D62828", width=2.5, dash="dash"),
-            marker=dict(size=7, color="#D62828", line=dict(color="white", width=1.5)),
+            marker=dict(size=6, color="#D62828", line=dict(color="white", width=1.5)),
+            hovertemplate="<b>%{x}</b><br>Forecast: $%{y:,.0f}<extra></extra>",
         ))
-    elif not f.empty:
-        fig.add_trace(go.Scatter(
-            x=f["year"], y=f["demand_ensemble"], mode="lines+markers", name="Forecast",
-            line=dict(color="#D62828", width=2.5, dash="dash"),
-            marker=dict(size=7, color="#D62828", line=dict(color="white", width=1.5)),
-        ))
+
+    # Year range for x-axis
+    all_years = []
+    if not h.empty:
+        all_years += h["year"].astype(int).tolist()
+    if not f.empty:
+        all_years += f["year"].astype(int).tolist()
+    x_min = min(all_years) - 0.5 if all_years else 2015
+    x_max = max(all_years) + 0.5 if all_years else 2028
+
     fig.update_layout(
         **CHART_LAYOUT,
-        title=dict(text=f"Historical & Projected Global Import Demand — {cname} (2015–2028)",
-                   font=dict(size=14, color="#1a3a5c")),
-        yaxis=dict(title="Import Demand (USD)", gridcolor="rgba(0,0,0,0.05)"),
-        xaxis=dict(title="", gridcolor="rgba(0,0,0,0.05)"),
+        title=dict(
+            text=f"Global Import Demand — {cname[:80]}",
+            font=dict(size=13, color="#1a3a5c")
+        ),
+        yaxis=dict(title="Import Demand (USD)", gridcolor="rgba(0,0,0,0.05)",
+                   tickformat="$.3s"),
+        xaxis=dict(
+            title="", gridcolor="rgba(0,0,0,0.05)",
+            tickmode="linear", dtick=1, tickformat="d",
+            range=[x_min, x_max],
+        ),
         margin=dict(t=50, b=30), height=430,
-        legend=dict(orientation="h", y=-0.12),
+        legend=dict(orientation="h", y=-0.14, x=0),
+        shapes=[dict(
+            type="line", x0=2024.5, x1=2024.5,
+            y0=0, y1=1, yref="paper",
+            line=dict(color="rgba(0,0,0,0.15)", width=1.5, dash="dot"),
+        )],
+        annotations=[dict(
+            x=2024.5, y=1, yref="paper",
+            text="Forecast →", showarrow=False,
+            font=dict(size=11, color="#888"), xanchor="left", xshift=6,
+        )] if not f.empty else [],
     )
+    
+    st.info("ℹ️ Historical data not available. Add `demand_history_global.csv` from the notebook to show the full 2015–2028 chart.")
+    
+    # Always plot the chart
     st.plotly_chart(fig, use_container_width=True)
 
     if not f.empty:
