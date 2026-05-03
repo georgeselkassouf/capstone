@@ -579,19 +579,19 @@ if page == "Home":
 # OPPORTUNITY FINDER
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Opportunity Finder":
-st.title("Opportunity Finder")
-st.markdown(
-    "Pick a **GCC exporter** and a **commodity** — the dashboard surfaces "
-    "the highest-potential destination markets ranked by a composite opportunity score."
-)
-st.markdown(
-    "<p style='font-size:1rem;font-weight:700;color:#1a3a5c;margin:4px 0 14px;line-height:1.8;'>"
-    "Score &nbsp;=&nbsp; Demand Forecast (25%) &nbsp;+&nbsp; Penetration Gap (20%) "
-    "&nbsp;+&nbsp; Country Viability (20%) &nbsp;+&nbsp; Landing Cost (15%) "
-    "&nbsp;+&nbsp; ML Growth Signal (10%) &nbsp;+&nbsp; Price Quality (10%)"
-    "</p>",
-    unsafe_allow_html=True,
-)
+    st.title("Opportunity Finder")
+    st.markdown(
+        "Pick a **GCC exporter** and a **commodity** — the dashboard surfaces "
+        "the highest-potential destination markets ranked by a composite opportunity score."
+    )
+    st.markdown(
+        "<p style='font-size:1rem;font-weight:700;color:#1a3a5c;margin:4px 0 14px;line-height:1.8;'>"
+        "Score &nbsp;=&nbsp; Demand Forecast (25%) &nbsp;+&nbsp; Penetration Gap (20%) "
+        "&nbsp;+&nbsp; Country Viability (20%) &nbsp;+&nbsp; Landing Cost (15%) "
+        "&nbsp;+&nbsp; ML Growth Signal (10%) &nbsp;+&nbsp; Price Quality (10%)"
+        "</p>",
+        unsafe_allow_html=True,
+    )
 
     opp = load_opp()
     if opp is None:
