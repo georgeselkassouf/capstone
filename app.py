@@ -661,12 +661,15 @@ elif page == "Opportunity Finder":
         st.stop()
 
     with col_cmd:
-        cmd_sel = st.selectbox(
-            "🔍 Search or select commodity — sorted by opportunity score ↓",
+        cmd_sel = st.multiselect(
+            "🔍 Search or select commodity",
             cmd_labels,
-            index=0,
-            key=f"cmd_sel_{gcc_sel}",
+            default=[cmd_labels[0]],
+            max_selections=1,
+            key=f"cmd_sel_{gcc_sel}"
         )
+
+    cmd_sel = cmd_sel[0] if cmd_sel else cmd_labels[0]
 
     sel_code = cmd_code_map[cmd_sel]
     df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
@@ -796,7 +799,7 @@ elif page == "Opportunity Finder":
 <b>Score</b> — composite opportunity score (0–1, higher = more attractive). &nbsp;·&nbsp;
 <b>Grade</b> — country viability tier (A+/A/B/C/D) based on World Bank governance & economic indicators. &nbsp;·&nbsp;
 <b>4Y Demand</b> — total forecasted import demand for this commodity in that market over 2025–2028. &nbsp;·&nbsp;
-<b>ML Growth P</b> — Random Forest + XGBoost probability (0–1) that this market will show above-median structural growth. &nbsp;·&nbsp;
+<b>ML Growth Probability</b> — Random Forest + XGBoost probability (0–1) that this market will show above-median structural growth. &nbsp;·&nbsp;
 <b>LPI</b> — World Bank Logistics Performance Index score (1–5) for the destination; higher = easier to ship to. &nbsp;·&nbsp;
 <b>Tariff %</b> — MFN applied tariff rate (%) faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
 <b>Transport</b> — recommended shipping mode based on distance, LPI, and commodity weight.
@@ -863,20 +866,6 @@ elif page == "Opportunity Finder":
             f"{cagr_val:.1f}%" if cagr_val is not None else "—",
             "compound annual growth rate of GCC export price",
         )
-
-    # Rationale expander
-    if "opportunity_rationale" in df_top.columns:
-        with st.expander("📋 Full scoring rationale for each market"):
-            for _, row in df_top.iterrows():
-                transport = row.get("recommended_transport", "")
-                icon = TRANSPORT_ICONS.get(str(transport), "")
-                st.markdown(
-                    f"**{row['dest_country']}** · Score **{row['opportunity_score']:.3f}** · "
-                    f"Grade {row.get('grade', '—')} · {icon} {transport}")
-                raw_rat = row.get("opportunity_rationale", "—") or "—"
-                clean_rat = re.sub(r'\s*\([^)]*\)', '', str(raw_rat)).strip()
-                st.caption(clean_rat)
-                st.markdown("---")
 
     # Download
     st.divider()
