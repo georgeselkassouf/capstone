@@ -645,11 +645,6 @@ elif page == "Opportunity Finder":
     df_gcc = opp[opp["gcc_country"] == gcc_sel].copy()
 
     # Only show commodities where this GCC country has actual exports.
-    # penetration_pct is computed as gcc_country_exports / world_demand inside
-    # the per-GCC scoring loop, so it is strictly > 0 only when that specific
-    # GCC country has real recorded export flows for the commodity.
-    # uv_mean is NOT a reliable proxy because it can be non-null even for
-    # zero-export rows if the notebook imputes a global average value.
     exported_cmds = (
         df_gcc[df_gcc["penetration_pct"] > 0]["cmdCode"].unique()
     )
@@ -662,32 +657,18 @@ elif page == "Opportunity Finder":
     cmd_labels = cmd_scores.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     cmd_code_map = dict(zip(cmd_labels, cmd_scores["cmdCode"]))
 
-    with col_cmd:
-        search_term = st.text_input(
-            "🔍 Search commodity (keyword or HS code)",
-            placeholder="e.g. motors, aluminium, dairy, 8501…",
-            key=f"cmd_search_{gcc_sel}",
-        )
-
     if not cmd_labels:
         st.warning("No commodities found for this GCC country.")
         st.stop()
 
-    # True substring filter — works for any keyword mid-label (e.g. "motors")
-    if search_term.strip():
-        term_lower = search_term.strip().lower()
-        filtered_labels = [lbl for lbl in cmd_labels if term_lower in lbl.lower()]
-        if not filtered_labels:
-            st.warning(f"No commodities matching **'{search_term}'** for {gcc_sel}. Try a broader keyword.")
-            st.stop()
-    else:
-        filtered_labels = cmd_labels   # all, ordered by opportunity score
+    with col_cmd:
+        cmd_sel = st.selectbox(
+            "🔍 Search or select commodity — sorted by opportunity score ↓",
+            cmd_labels,
+            index=0,
+            key=f"cmd_sel_{gcc_sel}",
+        )
 
-    cmd_sel = st.selectbox(
-        f"Select commodity — {len(filtered_labels)} result(s), sorted by opportunity score ↓",
-        filtered_labels,
-        key=f"cmd_sel_{gcc_sel}_{search_term}",
-    )
     sel_code = cmd_code_map[cmd_sel]
     df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
     if df.empty:
