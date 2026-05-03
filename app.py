@@ -1160,7 +1160,7 @@ elif page == "GCC Penetration":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Demand Forecasts":
     st.title("4-Year Import Demand Forecasts (2025–2028)")
-    st.markdown("Ridge panel regression forecasts of global import demand per commodity sector (Holt-Winters fallback for sparse series), trained on 2015–2024 historical data with 5 macroeconomic regressors. Point forecasts shown — 95% prediction intervals available at destination-country level.")
+    st.markdown("Ridge panel regression forecasts of global import demand per commodity sector (Holt-Winters fallback for sparse series), trained on 2015–2024 historical data with 5 macroeconomic regressors.")
 
     files = require("demand_forecast_global.csv", "gcc_export_penetration.csv")
     fc = files["demand_forecast_global.csv"]
