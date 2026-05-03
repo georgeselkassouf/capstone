@@ -333,7 +333,6 @@ with st.sidebar:
     st.session_state["nav_page"] = page
 
     st.divider()
-    st.caption("Data: UN Comtrade")
     st.caption("HS27 / HS71 / HS93 / HS99 excluded")
 
     # Logos at bottom of sidebar
@@ -567,7 +566,7 @@ if page == "Home":
         ("📍", "CEPII GeoDist",
          "Capital-to-capital and population-weighted geographic distance matrix."),
         ("🏢", "OCO Global",
-         "Analytical framework, sector prioritisation criteria, and strategic scope definition."),
+         "Analytical framework, sector prioritization criteria, and strategic scope definition."),
     ]
     s1, s2, s3 = st.columns(3)
     src_cols_list = [s1, s2, s3]
