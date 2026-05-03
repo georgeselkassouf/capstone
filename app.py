@@ -406,7 +406,7 @@ if page == "Home":
          "5% market share — the clearest signal of untapped diversification potential."),
         ("#D62828", "📉", "Demand Forecasts",
          "4-year projections (2025–2028)",
-         "Holt-Winters forecasts with 95% confidence intervals per commodity, filterable by GCC "
+         "Ridge panel regression forecasts per commodity (Holt-Winters fallback for sparse series), filterable by GCC "
          "exporter. Includes a projected demand table and a ranking of top forecast opportunities."),
     ]
 
@@ -451,7 +451,7 @@ if page == "Home":
                 padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
       <div style='font-size:1.2rem;margin-bottom:0.2rem;'>📈</div>
       <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>Demand Forecast</div>
-      <div style='font-size:0.68rem;color:#8a9ab0;'>Holt-Winters ETS</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>Ridge Regression</div>
     </div>
     <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
     <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
@@ -490,7 +490,7 @@ if page == "Home":
 
     score_rows = [
         ("#2e86de", "📈", "Demand Forecast",   "25",
-         "4-year total import demand (2025–2028) projected by Holt-Winters ETS. Captures structural market size."),
+         "4-year total import demand (2025–2028) projected by Ridge panel regression with 5 macro regressors. Captures structural market size."),
         ("#1B9AAA", "🎯", "Penetration Gap",    "20",
          "Inverse of current GCC share in the destination (1 − pen %). High gap = large untapped headroom."),
         ("#8338EC", "🏛️", "Country Viability",  "20",
@@ -884,13 +884,17 @@ elif page == "Executive Summary":
         z=pivot.values,
         x=pivot.columns.tolist(),
         y=pivot.index.tolist(),
-        colorscale=BLUE_SCALE,
+        colorscale="RdYlGn",
         zmin=z_min, zmax=z_max,
         text=[[f"{v:.3f}" if not np.isnan(v) else "—" for v in row] for row in pivot.values],
         texttemplate="%{text}",
-        textfont=dict(size=11, color="white"),
+        textfont=dict(size=11, color="#1a3a5c"),
         hovertemplate="<b>%{y}</b> → <b>%{x}</b><br>Best Score: %{z:.3f}<extra></extra>",
-        colorbar=dict(title=dict(text="Score", font=dict(size=12)), thickness=14, len=0.8),
+        colorbar=dict(
+            title=dict(text="Score", font=dict(size=12)),
+            thickness=14, len=0.8,
+            tickformat=".3f",
+        ),
     ))
     fig_heat.update_layout(
         **CHART_LAYOUT,
@@ -906,7 +910,7 @@ elif page == "Executive Summary":
     if yearly is not None:
         with col_l:
             st.subheader("Annual Import Demand Across 40 Destination Markets (2015–2024)")
-            st.caption("Combined import value of all non-GCC destination countries across all non-fuel HS2 sectors.")
+            st.caption("Combined import value of all non-GCC destination countries across all non-fuel HS4 sectors.")
             yearly["d_T"] = yearly["total_demand"] / 1e12
             st.plotly_chart(
                 area_chart(yearly["year"], yearly["d_T"], "#0F4C75", "USD (Trillions)"),
@@ -1156,7 +1160,7 @@ elif page == "GCC Penetration":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Demand Forecasts":
     st.title("4-Year Import Demand Forecasts (2025–2028)")
-    st.markdown("Holt-Winters exponential smoothing forecasts of global import demand per commodity sector, trained on 2015–2024 historical data.")
+    st.markdown("Ridge panel regression forecasts of global import demand per commodity sector (Holt-Winters fallback for sparse series), trained on 2015–2024 historical data with 5 macroeconomic regressors. Point forecasts shown — 95% prediction intervals available at destination-country level.")
 
     files = require("demand_forecast_global.csv", "gcc_export_penetration.csv")
     fc = files["demand_forecast_global.csv"]
