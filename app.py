@@ -389,7 +389,7 @@ if page == "Home":
     </div>
     <div style='width:1px;background:rgba(255,255,255,0.12);'></div>
     <div style='text-align:center;'>
-      <div style='font-size:2rem;font-weight:800;color:#ffffff;line-height:1;'>34</div>
+      <div style='font-size:2rem;font-weight:800;color:#ffffff;line-height:1;'>40</div>
       <div style='font-size:0.72rem;color:#7aabcf;text-transform:uppercase;
                   letter-spacing:0.1em;margin-top:0.3rem;'>Destination Markets</div>
     </div>
