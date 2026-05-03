@@ -644,7 +644,6 @@ elif page == "Opportunity Finder":
 <b>Score</b> — composite opportunity score (0–1, higher = more attractive). &nbsp;·&nbsp;
 <b>Grade</b> — country viability tier (A+/A/B/C/D) based on World Bank governance & economic indicators. &nbsp;·&nbsp;
 <b>4Y Demand</b> — total forecasted import demand for this commodity in that market over 2025–2028. &nbsp;·&nbsp;
-<b>Entry Room</b> — how much market share GCC has yet to capture (1 − current GCC share; higher = more room). &nbsp;·&nbsp;
 <b>ML Growth P</b> — Random Forest + XGBoost probability (0–1) that this market will show above-median structural growth. &nbsp;·&nbsp;
 <b>LPI</b> — World Bank Logistics Performance Index score (1–5) for the destination; higher = easier to ship to. &nbsp;·&nbsp;
 <b>Tariff %</b> — MFN applied tariff rate (%) faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
@@ -655,7 +654,7 @@ elif page == "Opportunity Finder":
     col_map = {
         "dest_country": "Target Market", "opportunity_score": "Score", "grade": "Grade",
         "demand_4y_total": "4Y Demand",
-        "pen_opportunity": "Entry Room", "ml_growth_prob": "ML Growth P",
+        "ml_growth_prob": "ML Growth P",
         "lpi_score": "LPI", "mfn_tariff_rate": "Tariff %",
         "weighted_dist_km": "Distance (km)", "dist_km": "Distance (km)",
         "recommended_transport": "Transport", "opportunity_rationale": "Rationale",
@@ -669,7 +668,7 @@ elif page == "Opportunity Finder":
     table = df_top[list(avail.keys())].rename(columns=avail).copy()
     if "4Y Demand" in table.columns:
         table["4Y Demand"] = table["4Y Demand"].apply(lambda x: fmt_usd(x) if pd.notna(x) else "—")
-    for c, r in [("Score", 3), ("GCC Pen %", 1), ("Entry Room", 2), ("UV ($/kg)", 2),
+    for c, r in [("Score", 3), ("GCC Pen %", 1), ("UV ($/kg)", 2),
                   ("Price CAGR %", 1), ("ML Growth P", 2), ("LPI", 2), ("Tariff %", 1)]:
         if c in table.columns:
             table[c] = table[c].round(r)
@@ -747,7 +746,7 @@ elif page == "Executive Summary":
     total_demand = yearly.loc[yearly["year"] == latest_yr, "total_demand"].iloc[0] if yearly is not None else 0
     total_gcc = yearly.loc[yearly["year"] == latest_yr, "total_gcc_exports"].iloc[0] if yearly is not None else 0
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
     c1.metric(
         f"Total Import Demand — 40 Destinations",
         fmt_usd(total_demand),
@@ -757,11 +756,6 @@ elif page == "Executive Summary":
         "Combined GCC Non-Fuel Exports",
         fmt_usd(total_gcc),
         f"all 6 GCC members combined, {latest_yr}",
-    )
-    c3.metric(
-        "Commodity-Market Pairs Evaluated",
-        f"{len(opp):,}",
-        f"across {opp['dest_country'].nunique()} destination markets",
     )
 
     st.divider()
