@@ -857,14 +857,15 @@ elif page == "Executive Summary":
     st.subheader("Opportunity Score Heatmap — GCC Exporters × Top Destination Markets")
     st.caption("Each cell shows the highest composite opportunity score for that GCC country × destination pair, across all commodities. Darker = stronger opportunity.")
 
-    # Get top 10 destinations by average score across all GCC countries
+    gcc_countries = sorted(opp["gcc_country"].unique().tolist())
+
+    # Top 10 destinations by average score across all GCC countries
     top_dests = (
         opp.groupby("dest_country")["opportunity_score"]
         .mean().nlargest(10).index.tolist()
     )
-    gcc_countries = sorted(opp["gcc_country"].unique().tolist())
 
-    # Build pivot: best score per GCC × destination (across all commodities)
+    # Best score per GCC × destination (across all commodities)
     heat_df = (
         opp[opp["dest_country"].isin(top_dests)]
         .groupby(["gcc_country", "dest_country"])["opportunity_score"]
@@ -873,12 +874,18 @@ elif page == "Executive Summary":
     pivot = heat_df.pivot(index="gcc_country", columns="dest_country", values="opportunity_score")
     pivot = pivot.reindex(index=gcc_countries, columns=top_dests)
 
+    # Use actual data range for color scale so small differences are visible
+    z_flat = pivot.values.flatten()
+    z_flat = z_flat[~np.isnan(z_flat)]
+    z_min = float(np.percentile(z_flat, 5))
+    z_max = float(np.percentile(z_flat, 95))
+
     fig_heat = go.Figure(go.Heatmap(
         z=pivot.values,
         x=pivot.columns.tolist(),
         y=pivot.index.tolist(),
         colorscale=BLUE_SCALE,
-        zmin=0, zmax=1,
+        zmin=z_min, zmax=z_max,
         text=[[f"{v:.3f}" if not np.isnan(v) else "—" for v in row] for row in pivot.values],
         texttemplate="%{text}",
         textfont=dict(size=11, color="white"),
@@ -887,9 +894,9 @@ elif page == "Executive Summary":
     ))
     fig_heat.update_layout(
         **CHART_LAYOUT,
-        margin=dict(t=10, b=10, l=10, r=10),
-        height=320,
-        xaxis=dict(tickfont=dict(size=12), tickangle=-30),
+        margin=dict(t=10, b=120, l=10, r=10),
+        height=380,
+        xaxis=dict(tickfont=dict(size=12), tickangle=-35, side="bottom"),
         yaxis=dict(tickfont=dict(size=12)),
     )
     st.plotly_chart(fig_heat, use_container_width=True)
