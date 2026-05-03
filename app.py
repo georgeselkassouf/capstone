@@ -1137,28 +1137,41 @@ elif page == "Demand Forecasts":
         gcc_options = ["All GCC"] + (sorted(opp_fc["gcc_country"].unique().tolist()) if opp_fc is not None else [])
         gcc_fc_sel = st.selectbox("Filter by GCC Exporter", gcc_options, key="fc_gcc")
 
+    # Always build from the full commodity list in the forecast file
+    fc_all = (
+        fc.groupby(["cmdCode", "commodity"])["demand_ensemble"]
+        .sum().reset_index()
+    )
+
     if gcc_fc_sel != "All GCC" and opp_fc is not None:
+        # Get opportunity scores for this country
         top_cmds = (
             opp_fc[opp_fc["gcc_country"] == gcc_fc_sel]
             .groupby(["cmdCode", "commodity"])["opportunity_score"]
-            .max().reset_index().sort_values("opportunity_score", ascending=False)
+            .max().reset_index()
         )
-        fc_filtered = fc[fc["cmdCode"].isin(top_cmds["cmdCode"])]
+        # Merge scores onto full list — NaN for commodities not ranked for this country
+        fc_totals = fc_all.merge(top_cmds[["cmdCode", "opportunity_score"]], on="cmdCode", how="left")
+        # Sort: ranked commodities first by opportunity score, then rest by demand
+        fc_totals["_ranked"] = fc_totals["opportunity_score"].notna()
         fc_totals = (
-            fc_filtered.groupby(["cmdCode", "commodity"])["demand_ensemble"]
-            .sum().reset_index()
-            .merge(top_cmds[["cmdCode", "opportunity_score"]], on="cmdCode")
-            .sort_values("opportunity_score", ascending=False)
+            fc_totals
+            .sort_values(["_ranked", "opportunity_score", "demand_ensemble"],
+                         ascending=[False, False, False])
+            .drop(columns=["_ranked"])
+            .reset_index(drop=True)
+        )
+        st.caption(
+            f"📌 Commodities ranked for **{gcc_fc_sel}** appear first (sorted by opportunity score). "
+            f"All other commodities follow. Forecast values show **global** import demand — "
+            f"they reflect market size, not GCC export volume, and are the same regardless of which GCC country is selected."
         )
     else:
-        fc_totals = (
-            fc.groupby(["cmdCode", "commodity"])["demand_ensemble"]
-            .sum().reset_index().sort_values("demand_ensemble", ascending=False)
-        )
+        fc_totals = fc_all.sort_values("demand_ensemble", ascending=False).reset_index(drop=True)
 
     labels = fc_totals.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     code_map = dict(zip(labels, fc_totals["cmdCode"]))
-    selected = st.selectbox("🔍 Search or select a commodity", labels[:80])
+    selected = st.selectbox("🔍 Search or select a commodity", labels)
     sel_code = code_map[selected]
 
     h = hist[hist["cmdCode"] == sel_code].sort_values("year")
@@ -1217,10 +1230,16 @@ elif page == "Demand Forecasts":
         f"{' — ' + gcc_fc_sel if gcc_fc_sel != 'All GCC' else ''}"
     )
     st.caption(
-        "Ranked by the sum of 4-year Holt-Winters demand forecasts."
-        + (f" Filtered to commodities relevant for {gcc_fc_sel}." if gcc_fc_sel != "All GCC" else "")
+        "Ranked by 4-year forecast demand."
+        + (f" Restricted to commodities scored for {gcc_fc_sel}, sorted by opportunity score." if gcc_fc_sel != "All GCC" else "")
     )
-    top_fc = fc_totals.head(15).copy()
+    # For the bar chart: when a country is selected, show only its ranked commodities
+    # (those with an opportunity score), sorted by score then demand
+    if gcc_fc_sel != "All GCC" and "opportunity_score" in fc_totals.columns:
+        chart_data = fc_totals[fc_totals["opportunity_score"].notna()].head(15).copy()
+    else:
+        chart_data = fc_totals.head(15).copy()
+    top_fc = chart_data
     top_fc["label"] = top_fc["cmdCode"].astype(str) + " — " + top_fc["commodity"].str[:45]
     top_fc["d_B"] = top_fc["demand_ensemble"] / 1e9
     fig2 = hbar(
