@@ -747,7 +747,7 @@ elif page == "Opportunity Finder":
 <b>ML Growth Probability</b> — ensemble probability (RF + XGBoost) that this market will show above-median structural export growth. &nbsp;·&nbsp;
 <b>LPI</b> — World Bank Logistics Performance Index (1–5); higher = easier to ship to. &nbsp;·&nbsp;
 <b>Tariff %</b> — MFN applied tariff rate faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
-<b>Distance (km)</b> — haversine distance from GCC exporter to destination, weighted by commodity type sensitivity. &nbsp;·&nbsp;
+<b>Distance (km)</b> — Haversine distance from GCC exporter to destination, weighted by commodity type sensitivity. &nbsp;·&nbsp;
 <b>Rationale</b> — plain-language summary of the key drivers behind this market's opportunity score.
 </div>
     """, unsafe_allow_html=True)
