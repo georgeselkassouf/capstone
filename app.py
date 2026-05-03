@@ -747,7 +747,7 @@ elif page == "Opportunity Finder":
 <b>ML Growth Probability</b> — ensemble probability (RF + XGBoost) that this market will show above-median structural export growth. &nbsp;·&nbsp;
 <b>LPI</b> — World Bank Logistics Performance Index (1–5); higher = easier to ship to. &nbsp;·&nbsp;
 <b>Tariff %</b> — MFN applied tariff rate faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
-<b>Distance (km)</b> — Haversine distance from GCC exporter to destination, weighted by commodity type sensitivity. &nbsp;·&nbsp;
+<b>Distance (km)</b> — haversine distance from GCC exporter to destination, weighted by commodity type sensitivity. &nbsp;·&nbsp;
 <b>Rationale</b> — plain-language summary of the key drivers behind this market's opportunity score.
 </div>
     """, unsafe_allow_html=True)
@@ -854,16 +854,45 @@ elif page == "Executive Summary":
     )
 
     st.divider()
-    st.subheader("Highest-Scored Export Opportunity per GCC Member State")
-    st.caption("For each GCC country, the single commodity-destination combination with the highest composite opportunity score.")
-    top1 = (
-        opp.sort_values("opportunity_score", ascending=False)
-        .groupby("gcc_country").first().reset_index()
+    st.subheader("Opportunity Score Heatmap — GCC Exporters × Top Destination Markets")
+    st.caption("Each cell shows the highest composite opportunity score for that GCC country × destination pair, across all commodities. Darker = stronger opportunity.")
+
+    # Get top 10 destinations by average score across all GCC countries
+    top_dests = (
+        opp.groupby("dest_country")["opportunity_score"]
+        .mean().nlargest(10).index.tolist()
     )
-    display = top1[["gcc_country", "dest_country", "commodity"]].copy()
-    display.columns = ["GCC Exporter", "Best Target Market", "Top Export Commodity"]
-    display["Top Export Commodity"] = display["Top Export Commodity"].str[:60]
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    gcc_countries = sorted(opp["gcc_country"].unique().tolist())
+
+    # Build pivot: best score per GCC × destination (across all commodities)
+    heat_df = (
+        opp[opp["dest_country"].isin(top_dests)]
+        .groupby(["gcc_country", "dest_country"])["opportunity_score"]
+        .max().reset_index()
+    )
+    pivot = heat_df.pivot(index="gcc_country", columns="dest_country", values="opportunity_score")
+    pivot = pivot.reindex(index=gcc_countries, columns=top_dests)
+
+    fig_heat = go.Figure(go.Heatmap(
+        z=pivot.values,
+        x=pivot.columns.tolist(),
+        y=pivot.index.tolist(),
+        colorscale=BLUE_SCALE,
+        zmin=0, zmax=1,
+        text=[[f"{v:.3f}" if not np.isnan(v) else "—" for v in row] for row in pivot.values],
+        texttemplate="%{text}",
+        textfont=dict(size=11, color="white"),
+        hovertemplate="<b>%{y}</b> → <b>%{x}</b><br>Best Score: %{z:.3f}<extra></extra>",
+        colorbar=dict(title=dict(text="Score", font=dict(size=12)), thickness=14, len=0.8),
+    ))
+    fig_heat.update_layout(
+        **CHART_LAYOUT,
+        margin=dict(t=10, b=10, l=10, r=10),
+        height=320,
+        xaxis=dict(tickfont=dict(size=12), tickangle=-30),
+        yaxis=dict(tickfont=dict(size=12)),
+    )
+    st.plotly_chart(fig_heat, use_container_width=True)
 
     st.divider()
     col_l, col_r = st.columns(2)
