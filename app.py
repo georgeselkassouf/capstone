@@ -464,6 +464,7 @@ if page == "Home":
             if st.button(f"Open {title} →", key=f"nav_{title}",
                          use_container_width=True):
                 st.session_state["nav_page"] = title
+                st.session_state["sidebar_nav"] = title
                 st.rerun()
 
     st.divider()
