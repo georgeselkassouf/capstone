@@ -340,155 +340,250 @@ with st.sidebar:
 # HOME
 # ═══════════════════════════════════════════════════════════════════════════
 if page == "Home":
+
+    # ── Hero ─────────────────────────────────────────────────────────────────
+    st.markdown("""
+<div style='background:linear-gradient(135deg,#0a1628 0%,#0f2847 55%,#0d3d6b 100%);
+            border-radius:16px;padding:3rem 3.2rem 2.6rem;margin-bottom:0.5rem;
+            box-shadow:0 4px 24px rgba(10,22,40,0.18);'>
+  <div style='font-size:0.68rem;font-weight:700;color:#4a90c4;letter-spacing:0.22em;
+              text-transform:uppercase;margin-bottom:0.9rem;'>
+    OCO Global &nbsp;·&nbsp; AUB MSBA Capstone &nbsp;·&nbsp; Spring 2026
+  </div>
+  <h1 style='font-size:2.6rem;font-weight:900;color:#ffffff;line-height:1.15;
+             margin:0 0 1rem;letter-spacing:-0.02em;'>
+    GCC Export<br>Opportunity Engine
+  </h1>
+  <p style='font-size:1.05rem;color:#b8cde0;max-width:680px;line-height:1.75;margin:0 0 2rem;'>
+    A decision-support platform that identifies, scores, and ranks the highest-potential
+    non-fuel export opportunities for all six GCC member states — powered by demand
+    forecasting, machine learning classifiers, and a multi-criteria composite scoring framework.
+  </p>
+  <div style='display:flex;gap:2.5rem;flex-wrap:wrap;'>
+    <div style='text-align:center;'>
+      <div style='font-size:2rem;font-weight:800;color:#ffffff;line-height:1;'>6</div>
+      <div style='font-size:0.72rem;color:#7aabcf;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-top:0.3rem;'>GCC Exporters</div>
+    </div>
+    <div style='width:1px;background:rgba(255,255,255,0.12);'></div>
+    <div style='text-align:center;'>
+      <div style='font-size:2rem;font-weight:800;color:#ffffff;line-height:1;'>34</div>
+      <div style='font-size:0.72rem;color:#7aabcf;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-top:0.3rem;'>Destination Markets</div>
+    </div>
+    <div style='width:1px;background:rgba(255,255,255,0.12);'></div>
+    <div style='text-align:center;'>
+      <div style='font-size:2rem;font-weight:800;color:#ffffff;line-height:1;'>10 yrs</div>
+      <div style='font-size:0.72rem;color:#7aabcf;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-top:0.3rem;'>Trade History</div>
+    </div>
+    <div style='width:1px;background:rgba(255,255,255,0.12);'></div>
+    <div style='text-align:center;'>
+      <div style='font-size:2rem;font-weight:800;color:#ffffff;line-height:1;'>4 yrs</div>
+      <div style='font-size:0.72rem;color:#7aabcf;text-transform:uppercase;
+                  letter-spacing:0.1em;margin-top:0.3rem;'>Demand Forecast</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── Analytical pipeline ───────────────────────────────────────────────────
+    st.markdown("<div style='height:0.2rem'></div>", unsafe_allow_html=True)
+    st.markdown("""
+<div style='background:#f4f7fc;border-radius:12px;padding:1.4rem 2rem;margin-bottom:0.2rem;'>
+  <div style='font-size:0.68rem;font-weight:700;color:#6b7a8d;letter-spacing:0.15em;
+              text-transform:uppercase;margin-bottom:1rem;'>Analytical Pipeline</div>
+  <div style='display:flex;align-items:center;gap:0;flex-wrap:wrap;'>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>📦</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>UN Comtrade</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>HS4 · 2015–2024</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>📈</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>Demand Forecast</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>Holt-Winters ETS</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>🤖</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>ML Classifier</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>RF + XGBoost</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>⚖️</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>Composite Score</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>6 weighted criteria</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#0f2847;border:1px solid #0f2847;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>🏆</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#ffffff;'>Ranked Markets</div>
+      <div style='font-size:0.68rem;color:#7aabcf;'>Per GCC country</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ── Module navigator cards ────────────────────────────────────────────────
     st.markdown(
-        "<div style='padding:2.4rem 0 1rem;'>"
-        "<div style='font-size:0.72rem;font-weight:700;color:#2e86de;letter-spacing:0.18em;"
-        "text-transform:uppercase;margin-bottom:0.5rem'>OCO Global · AUB MSBA Capstone · Spring 2026</div>"
-        "<h1 style='font-size:2.4rem;font-weight:900;color:#0f2847;line-height:1.18;margin:0 0 0.6rem'>Trade Opportunity Engine</h1>"
-        "<p style='font-size:1.1rem;color:#4a5568;max-width:720px;line-height:1.7;margin:0;'>"
-        "A data-driven decision-support tool that identifies and ranks the highest-potential non-fuel "
-        "export opportunities for GCC countries across 34+ global destination markets — powered by "
-        "demand forecasting, machine learning, and a multi-criteria composite scoring framework."
-        "</p></div>",
+        "<div style='font-size:1.15rem;font-weight:700;color:#0f2847;margin-bottom:1rem;'>"
+        "Dashboard Modules</div>",
         unsafe_allow_html=True,
     )
 
-    st.divider()
-
-    # ── What this tool does ──────────────────────────────────────────────────
-    st.markdown("## What This Tool Does")
-    st.markdown(
-        "The engine integrates ten years of UN Comtrade trade flows (2015–2024) with World Bank "
-        "logistics and governance indicators, MFN applied tariff data, and CEPII geographic distances "
-        "to produce a single, interpretable **Opportunity Score** (0–1) for every combination of "
-        "GCC exporter × commodity × destination market. "
-        "Scores are computed across hundreds of HS4-level commodities and surfaced through five "
-        "analytical views described below."
-    )
-
-    st.divider()
-
-    # ── Page-by-page guide ───────────────────────────────────────────────────
-    st.markdown("## Page Guide")
-
-    pages_info = [
-        ("🔍", "Opportunity Finder", "primary",
-         "The core analytical tool.",
-         [
-             "Select a **GCC exporter** (UAE, Saudi Arabia, Qatar, Kuwait, Oman, or Bahrain) and a **commodity** using the searchable dropdown — simply start typing a keyword such as *aluminium*, *dairy*, or *machinery*.",
-             "The engine instantly surfaces the **top 15 destination markets** ranked by composite opportunity score, visualised as both a ranked bar chart and a **world choropleth map** coloured by attractiveness.",
-             "A detailed **score-components table** breaks down each market's demand forecast, entry room, ML growth probability, logistics score, tariff rate, and recommended shipping mode.",
-             "**Commodity-level characteristics** — unit value and price CAGR — are displayed as summary cards beneath the table, since these metrics are constant across destination markets.",
-             "Use the **Download CSV** button to export the full ranked list for offline analysis or client reporting.",
-         ]),
-        ("📊", "Executive Summary", "secondary",
-         "A high-level strategic overview for stakeholders.",
-         [
-             "Three headline KPIs quantify the total addressable import demand across the 40 destinations, combined GCC export value, and the number of commodity-market pairs evaluated.",
-             "A summary table identifies the **single highest-scored export opportunity** per GCC member state — the most actionable starting point for country-level trade strategy.",
-             "Two trend charts track the evolution of global import demand and GCC non-fuel export performance from 2015 to 2024, providing macroeconomic context for the opportunity scores.",
-         ]),
-        ("🌍", "Market Demand", "secondary",
-         "Understand what the world is importing and where demand is growing.",
-         [
-             "A dual-axis chart displays **annual total import demand** across the 40 destination markets (bars, left axis) alongside the **year-on-year growth rate** (dotted line, right axis) — COVID-era contraction and recovery are clearly visible.",
-             "The **Top 20 commodity sectors** are ranked by total import value. Selecting a commodity from the dropdown **highlights its bar** in the chart and simultaneously renders its **historical demand trend** below, with YoY growth bars colour-coded red/blue.",
-         ]),
-        ("📈", "GCC Penetration", "secondary",
-         "Identify where GCC already competes — and where the whitespace lies.",
-         [
-             "The **highest-penetration chart** shows commodity sectors where GCC suppliers already hold the largest share of destination import demand. A high penetration signals competitive strength but limited incremental upside.",
-             "The **untapped opportunities chart** highlights high-demand sectors where GCC penetration remains below 5% — these represent the most strategically significant entry points for export diversification.",
-         ]),
-        ("📉", "Demand Forecasts", "secondary",
-         "Project commodity import demand four years forward.",
-         [
-             "Holt-Winters exponential smoothing models, fitted on 2015–2024 historical data, generate **4-year demand projections (2025–2028)** with 95% confidence intervals for each commodity sector.",
-             "Filter by GCC exporter to restrict the commodity list to sectors most relevant to that country's opportunity profile.",
-             "A **forecast table** presents point estimates and confidence bounds by year. A ranked bar chart below identifies the commodities with the largest total projected demand over the forecast horizon.",
-         ]),
+    modules = [
+        ("#2e86de", "🔍", "Opportunity Finder",
+         "Core analytical tool",
+         "Select a GCC exporter and commodity to surface the top 15 ranked destination markets, "
+         "a choropleth map, and a full score-components breakdown with transport recommendation."),
+        ("#1B9AAA", "📊", "Executive Summary",
+         "Strategic overview",
+         "Headline KPIs, the highest-scored opportunity per GCC member state, and macroeconomic "
+         "trend charts covering 2015–2024 import demand and GCC export performance."),
+        ("#8338EC", "🌍", "Market Demand",
+         "Global import landscape",
+         "Top 20 commodity sectors by import value, dual-axis annual demand chart with YoY growth, "
+         "and a per-commodity historical demand trend viewer."),
+        ("#FF6B35", "📈", "GCC Penetration",
+         "Whitespace analysis",
+         "Sectors where GCC already dominates versus high-demand sectors where GCC holds less than "
+         "5% market share — the clearest signal of untapped diversification potential."),
+        ("#D62828", "📉", "Demand Forecasts",
+         "4-year projections (2025–2028)",
+         "Holt-Winters forecasts with 95% confidence intervals per commodity, filterable by GCC "
+         "exporter. Includes a projected demand table and a ranking of top forecast opportunities."),
     ]
 
-    for icon, name, _kind, tagline, bullets in pages_info:
-        with st.expander(f"{icon}  **{name}** — {tagline}", expanded=(_kind == "primary")):
-            for b in bullets:
-                st.markdown(f"- {b}")
-
-    st.divider()
-
-    # ── Scoring methodology ──────────────────────────────────────────────────
-    st.markdown("## Composite Scoring Methodology")
-    st.markdown(
-        "Every opportunity is scored on a 0–1 scale by combining six independently normalised "
-        "sub-scores. Each sub-score is min-max scaled across all observations before weighting, "
-        "ensuring no single component dominates due to unit differences."
-    )
-
-    score_rows = [
-        ("📈 Demand Forecast", "25%",
-         "4-year total import demand projected by Holt-Winters for the destination market and commodity. "
-         "Captures the structural size of the opportunity."),
-        ("🎯 Penetration Gap", "20%",
-         "The inverse of the current GCC market share in the destination (1 − penetration %). "
-         "High gap = large untapped headroom."),
-        ("🏛️ Country Viability", "20%",
-         "World Bank composite score (2021–2023) covering economic performance, governance quality, "
-         "and infrastructure readiness. Filters out structurally unattractive or high-risk markets."),
-        ("🚢 Landing Cost Index", "15%",
-         "Blends the inverted MFN applied tariff rate (50%) and the World Bank Logistics Performance "
-         "Index (50%). Lower tariffs and better logistics both increase this score."),
-        ("🤖 ML Growth Signal", "10%",
-         "Ensemble probability from Random Forest and XGBoost classifiers predicting whether the "
-         "market will exhibit above-median structural export growth in the next period."),
-        ("💰 Price Quality", "10%",
-         "Weighted blend of the GCC unit export value level (70%) and its CAGR (30%). "
-         "Rewards commodities where GCC exports at a premium price with improving trajectory."),
-    ]
-
-    hdr1, hdr2, hdr3 = st.columns([2, 1, 5])
-    hdr1.markdown("**Component**")
-    hdr2.markdown("**Weight**")
-    hdr3.markdown("**What it measures**")
-    st.markdown("<hr style='margin:4px 0 10px;border-color:#e2e8f0'>", unsafe_allow_html=True)
-    for comp, wt, desc in score_rows:
-        c1, c2, c3 = st.columns([2, 1, 5])
-        c1.markdown(f"**{comp}**")
-        c2.markdown(
-            f"<span style='background:#e8f0fe;color:#1a3a5c;border-radius:20px;"
-            f"padding:2px 10px;font-weight:700;font-size:0.85rem'>{wt}</span>",
-            unsafe_allow_html=True,
-        )
-        c3.markdown(f"<span style='color:#4a5568;font-size:0.9rem'>{desc}</span>",
-                    unsafe_allow_html=True)
-        st.markdown("<hr style='margin:6px 0;border-color:#f0f4f8'>", unsafe_allow_html=True)
-
-    st.divider()
-
-    # ── Data sources ─────────────────────────────────────────────────────────
-    st.markdown("## Data Sources")
-    src_cols = st.columns(3)
-    sources = [
-        ("UN Comtrade", "Trade flows at HS4 level, 2015–2024, annual frequency across 40 reporting countries."),
-        ("World Bank LPI 2023", "Logistics Performance Index scores used in the landing cost sub-component."),
-        ("WITS / UNCTAD TRAINS", "MFN applied tariff rates at HS6, aggregated to HS2 by destination country."),
-        ("World Bank Open Data", "Country viability indicators covering governance, economics, and infrastructure (2021–2023)."),
-        ("CEPII GeoDist", "Capital-to-capital and weighted geographic distance matrix used for transport mode rules."),
-        ("OCO Global", "Analytical framework, sector prioritisation criteria, and strategic scope definition."),
-    ]
-    for i, (src, desc) in enumerate(sources):
-        with src_cols[i % 3]:
+    col_a, col_b = st.columns(2)
+    for i, (color, icon, title, subtitle, desc) in enumerate(modules):
+        target_col = col_a if i % 2 == 0 else col_b
+        with target_col:
             st.markdown(
-                f"<div style='background:#f8f9fb;border:1px solid #e8ecf1;border-radius:10px;"
-                f"padding:14px 16px;margin-bottom:12px;'>"
-                f"<div style='font-weight:700;color:#0f2847;font-size:0.9rem;margin-bottom:4px'>{src}</div>"
-                f"<div style='color:#4a5568;font-size:0.82rem;line-height:1.5'>{desc}</div>"
+                f"<div style='background:#ffffff;border:1px solid #e4eaf2;border-radius:12px;"
+                f"padding:1.4rem 1.6rem;margin-bottom:1rem;"
+                f"border-left:4px solid {color};'>"
+                f"<div style='display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;'>"
+                f"<span style='font-size:1.4rem;'>{icon}</span>"
+                f"<div>"
+                f"<div style='font-size:0.95rem;font-weight:700;color:#0f2847;'>{title}</div>"
+                f"<div style='font-size:0.72rem;font-weight:600;color:{color};text-transform:uppercase;"
+                f"letter-spacing:0.08em;'>{subtitle}</div>"
+                f"</div></div>"
+                f"<div style='font-size:0.85rem;color:#4a5568;line-height:1.6;'>{desc}</div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
 
+    st.divider()
+
+    # ── Scoring methodology ───────────────────────────────────────────────────
     st.markdown(
-        "<div style='text-align:center;color:#a0aec0;font-size:0.78rem;margin-top:1.5rem'>"
-        "Built by Georges Elkassouf &amp; Joseph Hobeika · AUB MSBA · Spring 2026 · in partnership with OCO Global"
+        "<div style='font-size:1.15rem;font-weight:700;color:#0f2847;margin-bottom:0.3rem;'>"
+        "Composite Scoring Methodology</div>"
+        "<div style='font-size:0.88rem;color:#6b7a8d;margin-bottom:1.2rem;'>"
+        "Each opportunity is scored 0–1 by combining six independently min-max normalised "
+        "sub-scores. Weights are fixed and expert-defined; no component can dominate due to "
+        "unit differences.</div>",
+        unsafe_allow_html=True,
+    )
+
+    score_rows = [
+        ("#2e86de", "📈", "Demand Forecast",      "25",
+         "4-year total import demand (2025–2028) projected by Holt-Winters ETS. Captures structural market size."),
+        ("#1B9AAA", "🎯", "Penetration Gap",       "20",
+         "Inverse of current GCC share in the destination (1 − pen %). High gap = large untapped headroom."),
+        ("#8338EC", "🏛️", "Country Viability",     "20",
+         "World Bank composite (2021–2023) across economic performance, governance, and infrastructure readiness."),
+        ("#FF6B35", "🚢", "Landing Cost Index",    "15",
+         "Blends inverted MFN tariff rate (50%) and World Bank LPI (50%). Lower cost, better logistics = higher score."),
+        ("#D62828", "🤖", "ML Growth Signal",      "10",
+         "Ensemble probability from Random Forest + XGBoost predicting above-median structural export growth."),
+        ("#0a7a4e", "💰", "Price Quality",          "10",
+         "Weighted blend of GCC unit export value level (70%) and its CAGR (30%). Rewards premium-priced exports."),
+    ]
+
+    for color, icon, comp, wt_str, desc in score_rows:
+        wt = int(wt_str)
+        bar_width = wt * 3.6   # scale 25% → 90px max on a nominal 360px bar
+        st.markdown(
+            f"<div style='background:#ffffff;border:1px solid #e8ecf2;border-radius:10px;"
+            f"padding:1rem 1.4rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:1.2rem;'>"
+            # icon + label
+            f"<div style='min-width:170px;display:flex;align-items:center;gap:0.55rem;'>"
+            f"<span style='font-size:1.1rem;'>{icon}</span>"
+            f"<span style='font-size:0.9rem;font-weight:700;color:#0f2847;'>{comp}</span>"
+            f"</div>"
+            # weight badge + bar
+            f"<div style='min-width:160px;display:flex;align-items:center;gap:0.8rem;'>"
+            f"<span style='background:{color}1a;color:{color};border-radius:20px;"
+            f"padding:2px 10px;font-weight:800;font-size:0.82rem;white-space:nowrap;'>{wt}%</span>"
+            f"<div style='background:#f0f4f8;border-radius:4px;height:6px;width:120px;'>"
+            f"<div style='background:{color};border-radius:4px;height:6px;width:{bar_width}px;'></div>"
+            f"</div></div>"
+            # description
+            f"<div style='font-size:0.84rem;color:#4a5568;line-height:1.55;'>{desc}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+
+    # ── Data sources ──────────────────────────────────────────────────────────
+    st.markdown(
+        "<div style='font-size:1.15rem;font-weight:700;color:#0f2847;margin-bottom:1rem;'>"
+        "Data Sources</div>",
+        unsafe_allow_html=True,
+    )
+    sources = [
+        ("📦", "UN Comtrade",
+         "HS4-level annual trade flows, 2015–2024, across 40 reporting countries."),
+        ("🏦", "World Bank LPI 2023",
+         "Logistics Performance Index scores used in the landing cost sub-component."),
+        ("📋", "WITS / UNCTAD TRAINS",
+         "MFN applied tariff rates at HS6, aggregated to HS2 by destination country."),
+        ("🌐", "World Bank Open Data",
+         "Country viability indicators: governance, economics, and infrastructure (2021–2023)."),
+        ("📍", "CEPII GeoDist",
+         "Capital-to-capital and population-weighted geographic distance matrix."),
+        ("🏢", "OCO Global",
+         "Analytical framework, sector prioritisation criteria, and strategic scope definition."),
+    ]
+    s1, s2, s3 = st.columns(3)
+    src_cols_list = [s1, s2, s3]
+    for i, (ico, src, desc) in enumerate(sources):
+        with src_cols_list[i % 3]:
+            st.markdown(
+                f"<div style='background:#f8f9fb;border:1px solid #e4eaf2;border-radius:10px;"
+                f"padding:1rem 1.2rem;margin-bottom:0.8rem;'>"
+                f"<div style='display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;'>"
+                f"<span style='font-size:1rem;'>{ico}</span>"
+                f"<span style='font-weight:700;color:#0f2847;font-size:0.88rem;'>{src}</span>"
+                f"</div>"
+                f"<div style='color:#6b7a8d;font-size:0.81rem;line-height:1.55;'>{desc}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+    # ── Footer ────────────────────────────────────────────────────────────────
+    st.markdown(
+        "<div style='border-top:1px solid #e8ecf2;margin-top:1.5rem;padding-top:1.2rem;"
+        "display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;'>"
+        "<div style='font-size:0.78rem;color:#8a9ab0;'>"
+        "Georges Elkassouf &amp; Joseph Hobeika &nbsp;·&nbsp; AUB MSBA &nbsp;·&nbsp; Spring 2026"
+        "</div>"
+        "<div style='font-size:0.78rem;color:#8a9ab0;'>"
+        "In partnership with <strong style='color:#0f2847;'>OCO Global</strong>"
+        "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
