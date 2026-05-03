@@ -609,8 +609,22 @@ elif page == "Opportunity Finder":
 
     cmd_scores = (
         df_gcc_exported.groupby(["cmdCode", "commodity"])["opportunity_score"]
-        .max().reset_index().sort_values("opportunity_score", ascending=False)
+        .max().reset_index()
     )
+
+    # Sort by gcc_exports from pen_scored (the exports KPI) descending
+    pen_data_sort = load("gcc_export_penetration.csv")
+    if pen_data_sort is not None and "gcc_exports" in pen_data_sort.columns:
+        exports_by_cmd = (
+            pen_data_sort[pen_data_sort["gcc_country"] == gcc_sel]
+            .groupby("cmdCode")["gcc_exports"].sum().reset_index()
+            .rename(columns={"gcc_exports": "_exp_val"})
+        )
+        cmd_scores = cmd_scores.merge(exports_by_cmd, on="cmdCode", how="left")
+        cmd_scores["_exp_val"] = cmd_scores["_exp_val"].fillna(0)
+        cmd_scores = cmd_scores.sort_values("_exp_val", ascending=False).drop(columns=["_exp_val"])
+    else:
+        cmd_scores = cmd_scores.sort_values("opportunity_score", ascending=False)
     cmd_labels = cmd_scores.apply(
         lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1
     ).tolist()
@@ -622,7 +636,7 @@ elif page == "Opportunity Finder":
 
     with col_cmd:
         cmd_sel = st.selectbox(
-            "🔍 Search or select commodity — sorted by opportunity score ↓",
+            "🔍 Search or select commodity",
             cmd_labels,
             index=0,
             key=f"cmd_sel_{gcc_sel}",
@@ -880,15 +894,30 @@ elif page == "Executive Summary":
     z_min = float(np.percentile(z_flat, 5))
     z_max = float(np.percentile(z_flat, 95))
 
+    # Custom soft scale: light cream → teal → dark navy (matches app palette)
+    HEATMAP_SCALE = [
+        [0.0, "#f0f7f4"],
+        [0.3, "#a8d5c2"],
+        [0.6, "#1B9AAA"],
+        [1.0, "#0a3d62"],
+    ]
+
+    # Determine per-cell text color based on value (dark text on light cells, white on dark)
+    z_mid = (z_min + z_max) / 2
+    text_colors = [
+        ["#1a3a5c" if (not np.isnan(v) and v < z_mid) else "white" for v in row]
+        for row in pivot.values
+    ]
+
     fig_heat = go.Figure(go.Heatmap(
         z=pivot.values,
         x=pivot.columns.tolist(),
         y=pivot.index.tolist(),
-        colorscale="RdYlGn",
+        colorscale=HEATMAP_SCALE,
         zmin=z_min, zmax=z_max,
         text=[[f"{v:.3f}" if not np.isnan(v) else "—" for v in row] for row in pivot.values],
         texttemplate="%{text}",
-        textfont=dict(size=11, color="#1a3a5c"),
+        textfont=dict(size=11),
         hovertemplate="<b>%{y}</b> → <b>%{x}</b><br>Best Score: %{z:.3f}<extra></extra>",
         colorbar=dict(
             title=dict(text="Score", font=dict(size=12)),
