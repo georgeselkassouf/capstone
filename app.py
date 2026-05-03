@@ -906,7 +906,7 @@ elif page == "Executive Summary":
         st.stop()
     yearly = derive_yearly()
 
-    latest_yr = int(yearly["year"].max()) - 2 if yearly is not None else "—"
+    latest_yr = int(yearly["year"].max()) if yearly is not None else "—"
     total_demand = yearly.loc[yearly["year"] == latest_yr, "total_demand"].iloc[0] if yearly is not None else 0
     total_gcc = yearly.loc[yearly["year"] == latest_yr, "total_gcc_exports"].iloc[0] if yearly is not None else 0
 
