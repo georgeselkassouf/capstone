@@ -135,12 +135,11 @@ def load(name):
 
 
 # Columns the dashboard actually uses from opportunity_rankings_full.csv.
-# Loading only these cuts parse time and memory significantly on large files.
 _OPP_COLS = [
     "gcc_country", "cmdCode", "commodity", "dest_country", "opportunity_score",
     "grade", "demand_4y_total", "penetration_pct", "pen_opportunity",
     "ml_growth_prob", "uv_mean", "uv_cagr",
-    "weighted_dist_km", "dist_km",          # keep both; one may be absent
+    "weighted_dist_km", "dist_km",
     "lpi_score", "mfn_tariff_rate",
     "recommended_transport", "opportunity_rationale",
 ]
@@ -168,38 +167,20 @@ _OPP_DTYPES = {
 
 @st.cache_data(show_spinner="Loading opportunity rankings…")
 def load_opp():
-    """
-    Load opportunity_rankings_full.csv with memory-efficient dtypes,
-    restrict to needed columns, and deduplicate to one row per
-    (gcc_country, cmdCode, dest_country) — keeping the highest score.
-
-    The file may be large (90+ MB) if the notebook produced yearly rows
-    or HS4-level rows; deduplication ensures the dashboard always shows
-    the single best score per opportunity triplet.
-    """
     path = DATA / "opportunity_rankings_full.csv"
     if not path.exists():
         return None
 
-    # Read only columns that exist in the file to avoid KeyErrors on
-    # optional columns (weighted_dist_km, dist_km, etc.)
     header = pd.read_csv(path, nrows=0).columns.tolist()
     use_cols = [c for c in _OPP_COLS if c in header]
     dtype_map = {k: v for k, v in _OPP_DTYPES.items() if k in use_cols}
 
-    df = pd.read_csv(path, usecols=use_cols, dtype=dtype_map,
-                     low_memory=False)
+    df = pd.read_csv(path, usecols=use_cols, dtype=dtype_map, low_memory=False)
 
-    # Deduplicate: one row per (gcc_country, cmdCode, dest_country).
-    # If the notebook produced one row per year or multiple model runs,
-    # keep the row with the highest opportunity_score.
     key = ["gcc_country", "cmdCode", "dest_country"]
-    before = len(df)
     df = (df.sort_values("opportunity_score", ascending=False)
             .drop_duplicates(subset=key, keep="first")
             .reset_index(drop=True))
-    after = len(df)
-
     return df
 
 
@@ -211,7 +192,7 @@ def require(*names):
         if frames[n] is None:
             missing.append(n)
     if missing:
-        st.error(f"Missing: **{', '.join(missing)}**. Place CSVs from notebook Section 45 into `data/`.")
+        st.error(f"Missing: **{', '.join(missing)}**. Place CSVs from notebook Section 44 into `data/`.")
         st.stop()
     return frames if len(names) > 1 else frames[names[0]]
 
@@ -226,7 +207,7 @@ def fmt_usd(val, d=1):
 
 
 def hbar(labels, values, colorscale=BLUE_SCALE, text_fmt=None, height=None, x_title=""):
-    """Polished horizontal bar chart matching the Opportunity Finder style."""
+    """Polished horizontal bar chart."""
     if text_fmt is None:
         text_fmt = [f"{v:.3f}" for v in values]
     fig = go.Figure()
@@ -291,15 +272,7 @@ def line_chart(x, y, color="#0F4C75", y_label="", title="", height=320):
 
 @st.cache_data
 def derive_yearly():
-    pen = load("gcc_export_penetration.csv")
-    if pen is None or "year" not in pen.columns:
-        # pen_scored (new notebook output) is a 2022-2023 average with no year
-        # column — year-level historical aggregation is not possible from this file.
-        return None
-    return pen.groupby("year").agg(
-        total_demand=("world_demand", "sum"),
-        total_gcc_exports=("gcc_exports", "sum"),
-    ).reset_index()
+    return load("gcc_yearly_summary.csv")
 
 
 @st.cache_data
@@ -341,7 +314,6 @@ with st.sidebar:
     _pages = ["Home", "Opportunity Finder", "Executive Summary", "Market Demand",
               "GCC Penetration", "Demand Forecasts"]
 
-    # Allow Home page module cards to trigger navigation via session state
     if "nav_page" not in st.session_state:
         st.session_state["nav_page"] = "Home"
 
@@ -351,7 +323,6 @@ with st.sidebar:
         index=_pages.index(st.session_state["nav_page"]),
         label_visibility="collapsed",
     )
-    # Keep session state in sync with manual sidebar clicks
     st.session_state["nav_page"] = page
 
     st.divider()
@@ -364,7 +335,6 @@ with st.sidebar:
 # ═══════════════════════════════════════════════════════════════════════════
 if page == "Home":
 
-    # ── Hero ─────────────────────────────────────────────────────────────────
     st.markdown("""
 <div style='background:linear-gradient(135deg,#0a1628 0%,#0f2847 55%,#0d3d6b 100%);
             border-radius:16px;padding:3rem 3.2rem 2.6rem;margin-bottom:0.5rem;
@@ -411,7 +381,6 @@ if page == "Home":
 
     st.divider()
 
-    # ── Module navigator cards ────────────────────────────────────────────────
     st.markdown(
         "<div style='font-size:1.15rem;font-weight:700;color:#0f2847;margin-bottom:1rem;'>"
         "Dashboard Modules</div>",
@@ -460,14 +429,12 @@ if page == "Home":
                 f"</div>",
                 unsafe_allow_html=True,
             )
-            if st.button(f"Open {title} →", key=f"nav_{title}",
-                         use_container_width=True):
+            if st.button(f"Open {title} →", key=f"nav_{title}", use_container_width=True):
                 st.session_state["nav_page"] = title
                 st.rerun()
 
     st.divider()
 
-    # ── Analytical pipeline ───────────────────────────────────────────────────
     st.markdown("""
 <div style='background:#f4f7fc;border-radius:12px;padding:1.4rem 2rem;margin-bottom:0.2rem;'>
   <div style='font-size:0.68rem;font-weight:700;color:#6b7a8d;letter-spacing:0.15em;
@@ -511,7 +478,6 @@ if page == "Home":
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Scoring methodology ───────────────────────────────────────────────────
     st.markdown(
         "<div style='font-size:1.15rem;font-weight:700;color:#0f2847;margin-bottom:0.3rem;'>"
         "Composite Scoring Methodology</div>"
@@ -523,39 +489,36 @@ if page == "Home":
     )
 
     score_rows = [
-        ("#2e86de", "📈", "Demand Forecast",      "25",
+        ("#2e86de", "📈", "Demand Forecast",   "25",
          "4-year total import demand (2025–2028) projected by Holt-Winters ETS. Captures structural market size."),
-        ("#1B9AAA", "🎯", "Penetration Gap",       "20",
+        ("#1B9AAA", "🎯", "Penetration Gap",    "20",
          "Inverse of current GCC share in the destination (1 − pen %). High gap = large untapped headroom."),
-        ("#8338EC", "🏛️", "Country Viability",     "20",
+        ("#8338EC", "🏛️", "Country Viability",  "20",
          "World Bank composite (2021–2023) across economic performance, governance, and infrastructure readiness."),
-        ("#FF6B35", "🚢", "Landing Cost Index",    "15",
+        ("#FF6B35", "🚢", "Landing Cost Index", "15",
          "Blends inverted MFN tariff rate (50%) and World Bank LPI (50%). Lower cost, better logistics = higher score."),
-        ("#D62828", "🤖", "ML Growth Signal",      "10",
+        ("#D62828", "🤖", "ML Growth Signal",   "10",
          "Ensemble probability from Random Forest + XGBoost predicting above-median structural export growth."),
-        ("#0a7a4e", "💰", "Price Quality",          "10",
+        ("#0a7a4e", "💰", "Price Quality",       "10",
          "Weighted blend of GCC unit export value level (70%) and its CAGR (30%). Rewards premium-priced exports."),
     ]
 
     for color, icon, comp, wt_str, desc in score_rows:
         wt = int(wt_str)
-        bar_width = wt * 3.6   # scale 25% → 90px max on a nominal 360px bar
+        bar_width = wt * 3.6
         st.markdown(
             f"<div style='background:#ffffff;border:1px solid #e8ecf2;border-radius:10px;"
             f"padding:1rem 1.4rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:1.2rem;'>"
-            # icon + label
             f"<div style='min-width:170px;display:flex;align-items:center;gap:0.55rem;'>"
             f"<span style='font-size:1.1rem;'>{icon}</span>"
             f"<span style='font-size:0.9rem;font-weight:700;color:#0f2847;'>{comp}</span>"
             f"</div>"
-            # weight badge + bar
             f"<div style='min-width:160px;display:flex;align-items:center;gap:0.8rem;'>"
             f"<span style='background:{color}1a;color:{color};border-radius:20px;"
             f"padding:2px 10px;font-weight:800;font-size:0.82rem;white-space:nowrap;'>{wt}%</span>"
             f"<div style='background:#f0f4f8;border-radius:4px;height:6px;width:120px;'>"
             f"<div style='background:{color};border-radius:4px;height:6px;width:{bar_width}px;'></div>"
             f"</div></div>"
-            # description
             f"<div style='font-size:0.84rem;color:#4a5568;line-height:1.55;'>{desc}</div>"
             f"</div>",
             unsafe_allow_html=True,
@@ -563,7 +526,6 @@ if page == "Home":
 
     st.divider()
 
-    # ── Data sources ──────────────────────────────────────────────────────────
     st.markdown(
         "<div style='font-size:1.15rem;font-weight:700;color:#0f2847;margin-bottom:1rem;'>"
         "Data Sources</div>",
@@ -599,7 +561,6 @@ if page == "Home":
                 unsafe_allow_html=True,
             )
 
-    # ── Footer ────────────────────────────────────────────────────────────────
     st.markdown(
         "<div style='border-top:1px solid #e8ecf2;margin-top:1.5rem;padding-top:1.2rem;"
         "display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;'>"
@@ -643,7 +604,6 @@ elif page == "Opportunity Finder":
 
     df_gcc = opp[opp["gcc_country"] == gcc_sel].copy()
 
-    # Only show commodities where this GCC country has actual exports.
     exported_cmds = df_gcc[df_gcc["penetration_pct"] > 0]["cmdCode"].unique()
     df_gcc_exported = df_gcc[df_gcc["cmdCode"].isin(exported_cmds)]
 
@@ -661,44 +621,14 @@ elif page == "Opportunity Finder":
         st.stop()
 
     with col_cmd:
-        search_term = st.text_input(
-            "🔍 Search commodity",
-            placeholder="Type to filter (e.g. steel, plastic, clock...)",
-            key=f"search_{gcc_sel}"
-        )
-    
-        # Filter based on search
-        if search_term:
-            filtered = cmd_scores[
-                cmd_scores["commodity"].str.contains(search_term, case=False, na=False)
-            ]
-        else:
-            filtered = cmd_scores
-    
-        # Build labels
-        filtered_labels = filtered.apply(
-            lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}",
-            axis=1
-        ).tolist()
-    
-        cmd_code_map_filtered = dict(zip(filtered_labels, filtered["cmdCode"]))
-    
-        if not filtered_labels:
-            st.warning("No matching commodities found.")
-            st.stop()
-    
         cmd_sel = st.selectbox(
-            "Select commodity",
-            filtered_labels,
+            "🔍 Search or select commodity — sorted by opportunity score ↓",
+            cmd_labels,
             index=0,
-            key=f"cmd_sel_{gcc_sel}"
+            key=f"cmd_sel_{gcc_sel}",
         )
 
-    # Use .get() to avoid KeyError
-    sel_code = cmd_code_map_filtered.get(cmd_sel)
-    if sel_code is None:
-        st.error("Selected commodity not found in mapping. Please refresh the page.")
-        st.stop()
+    sel_code = cmd_code_map[cmd_sel]
 
     df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values(
         "opportunity_score", ascending=False
@@ -719,7 +649,6 @@ elif page == "Opportunity Finder":
         "scored markets",
     )
 
-    # GCC Exports
     pen_data = load("gcc_export_penetration.csv")
     gcc_exp_val = 0
     exp_label = "—"
@@ -735,12 +664,11 @@ elif page == "Opportunity Finder":
             cmd_pen = pen_data[pen_data["cmdCode"] == sel_code]
         gcc_exp_val = float(cmd_pen["gcc_exports"].sum()) if not cmd_pen.empty else 0
 
-    # Fallback estimate
     if gcc_exp_val == 0 and "penetration_pct" in df.columns and "demand_4y_total" in df.columns:
         avg_pen = float(df["penetration_pct"].mean()) / 100.0
         total_demand_annual = float(df["demand_4y_total"].sum()) / 4.0
         gcc_exp_val = avg_pen * total_demand_annual
-        exp_label = f"est. from pen. gap"
+        exp_label = "est. from pen. gap"
         exp_year = "2024 est."
     else:
         exp_label = f"{gcc_sel} exports, {exp_year}" if exp_year else "GCC combined"
@@ -810,7 +738,6 @@ elif page == "Opportunity Finder":
     # Detail table
     st.divider()
     st.subheader(f"Score Components — Top 15 Target Markets for {gcc_sel} ({commodity_name[:40]})")
-    # Column legend
     st.markdown("""
 <div style="background:#f4f7fc;border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:0.82rem;color:#1a3a5c;line-height:1.9;">
 <b>Column guide:</b> &nbsp;
@@ -832,7 +759,6 @@ elif page == "Opportunity Finder":
         "weighted_dist_km": "Distance (km)", "dist_km": "Distance (km)",
         "recommended_transport": "Transport", "opportunity_rationale": "Rationale",
     }
-    # prefer weighted_dist_km; drop dist_km if both present to avoid duplicate columns
     if "weighted_dist_km" in df_top.columns and "dist_km" in df_top.columns:
         col_map.pop("dist_km", None)
     elif "weighted_dist_km" not in df_top.columns:
@@ -846,7 +772,8 @@ elif page == "Opportunity Finder":
         if c in table.columns:
             table[c] = table[c].round(r)
     if "Distance (km)" in table.columns:
-        table["Distance (km)"] = table["Distance (km)"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "—")
+        table["Distance (km)"] = table["Distance (km)"].apply(
+            lambda x: f"{x:,.0f}" if pd.notna(x) else "—")
     if "Transport" in table.columns:
         table["Transport"] = table["Transport"].apply(
             lambda x: f"{TRANSPORT_ICONS.get(str(x), '')} {x}" if pd.notna(x) else "—")
@@ -857,11 +784,11 @@ elif page == "Opportunity Finder":
             .str.strip()
             .str[:90]
         )
-    st.dataframe(table, use_container_width=True, hide_index=True, height=min(620, len(df_top) * 42 + 50))
+    st.dataframe(table, use_container_width=True, hide_index=True,
+                 height=min(620, len(df_top) * 42 + 50))
 
-    # Commodity-level metrics (same across all destinations — shown as cards, not table columns)
     st.markdown("#### Commodity-Level Characteristics *(constant across all destination markets)*")
-    st.caption("These values describe the commodity itself rather than a specific destination, so they are the same for every row in the table above.")
+    st.caption("These values describe the commodity itself rather than a specific destination.")
     ci1, ci2, ci3 = st.columns(3)
     if "penetration_pct" in df_top.columns:
         avg_pen = float(df_top["penetration_pct"].mean())
@@ -885,7 +812,20 @@ elif page == "Opportunity Finder":
             "compound annual growth rate of GCC export price",
         )
 
-    # Download
+    # Rationale expander
+    if "opportunity_rationale" in df_top.columns:
+        with st.expander("📋 Full scoring rationale for each market"):
+            for _, row in df_top.iterrows():
+                transport = row.get("recommended_transport", "")
+                icon = TRANSPORT_ICONS.get(str(transport), "")
+                st.markdown(
+                    f"**{row['dest_country']}** · Score **{row['opportunity_score']:.3f}** · "
+                    f"Grade {row.get('grade', '—')} · {icon} {transport}")
+                raw_rat = row.get("opportunity_rationale", "—") or "—"
+                clean_rat = re.sub(r'\s*\([^)]*\)', '', str(raw_rat)).strip()
+                st.caption(clean_rat)
+                st.markdown("---")
+
     st.divider()
     dl_cols = [c for c in avail if c in df.columns]
     st.download_button(
@@ -914,7 +854,7 @@ elif page == "Executive Summary":
 
     c1, c2 = st.columns(2)
     c1.metric(
-        f"Total Import Demand — 40 Destinations",
+        "Total Import Demand — 40 Destinations",
         fmt_usd(total_demand),
         f"across all HS2 sectors, {latest_yr}",
     )
@@ -936,7 +876,6 @@ elif page == "Executive Summary":
     display["Top Export Commodity"] = display["Top Export Commodity"].str[:60]
     st.dataframe(display, use_container_width=True, hide_index=True)
 
-    # Trend charts
     st.divider()
     col_l, col_r = st.columns(2)
     if yearly is not None:
@@ -967,10 +906,6 @@ elif page == "Executive Summary":
             )
 
 
-
-
-
-
 # ═══════════════════════════════════════════════════════════════════════════
 # MARKET DEMAND
 # ═══════════════════════════════════════════════════════════════════════════
@@ -980,28 +915,22 @@ elif page == "Market Demand":
 
     pen = require("gcc_export_penetration.csv")
 
-    # pen_scored (new notebook output) is a 2022-2023 average — no year column.
-    # Year-level historical trend charts require per-year rows; skip gracefully.
     if "year" not in pen.columns:
         st.info(
             "ℹ️ Year-level historical demand trend is not available in the current "
-            "data version. `gcc_export_penetration.csv` is now a 2022–2023 average "
-            "(`pen_scored`) with no `year` column. The top-commodity ranking and "
-            "per-commodity trend selector below are still fully functional."
+            "data version. `gcc_export_penetration.csv` is a 2022–2023 average "
+            "with no `year` column. The top-commodity ranking below is still fully functional."
         )
     else:
-        # Yearly trend
         yearly = pen.groupby("year")["world_demand"].sum().reset_index()
-        yearly["d_B"] = yearly["world_demand"] / 1e9
-
-        st.subheader("Annual Combined Import Demand Across 40 Destination Markets (2015–2024)")
-        st.caption("Bar = total import value (left axis, USD Trillions). Line = year-on-year growth rate (right axis, %). The 2019→2020 dip reflects COVID-19 trade contraction.")
         yearly["d_T"] = yearly["world_demand"] / 1e12
         yearly = yearly.sort_values("year").reset_index(drop=True)
         yearly["yoy_growth"] = yearly["d_T"].pct_change() * 100
 
+        st.subheader("Annual Combined Import Demand Across 40 Destination Markets (2015–2024)")
+        st.caption("Bar = total import value (left axis, USD Trillions). Line = year-on-year growth rate (right axis, %).")
+
         fig_demand = go.Figure()
-        # Bars coloured by value
         fig_demand.add_trace(go.Bar(
             x=yearly["year"], y=yearly["d_T"],
             name="Import Demand (USD T)",
@@ -1011,7 +940,6 @@ elif page == "Market Demand":
             hovertemplate="%{x}<br>Demand: $%{y:.2f}T<extra></extra>",
             yaxis="y1",
         ))
-        # YoY growth line on secondary axis
         fig_demand.add_trace(go.Scatter(
             x=yearly["year"], y=yearly["yoy_growth"],
             name="YoY Growth %",
@@ -1026,33 +954,23 @@ elif page == "Market Demand":
         fig_demand.update_layout(
             **CHART_LAYOUT,
             margin=dict(t=30, b=40, l=10, r=80), height=420,
-            yaxis=dict(
-                title="USD (Trillions)", gridcolor="rgba(0,0,0,0.05)", side="left",
-                tickformat=".1f", ticksuffix="T",
-                tickfont=dict(size=12, color="#1a3a5c"),
-                title_font=dict(size=12),
-            ),
-            yaxis2=dict(
-                title="YoY Growth (%)", overlaying="y", side="right",
-                showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.2)",
-                zerolinewidth=1.5,
-                ticksuffix="%", tickformat="+.1f",
-                tickfont=dict(size=12, color="#c4420a"),
-                title_font=dict(size=12, color="#c4420a"),
-            ),
-            xaxis=dict(
-                title="", showgrid=False,
-                tickfont=dict(size=12), dtick=1,
-            ),
+            yaxis=dict(title="USD (Trillions)", gridcolor="rgba(0,0,0,0.05)", side="left",
+                       tickformat=".1f", ticksuffix="T",
+                       tickfont=dict(size=12, color="#1a3a5c"), title_font=dict(size=12)),
+            yaxis2=dict(title="YoY Growth (%)", overlaying="y", side="right",
+                        showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.2)",
+                        zerolinewidth=1.5, ticksuffix="%", tickformat="+.1f",
+                        tickfont=dict(size=12, color="#c4420a"),
+                        title_font=dict(size=12, color="#c4420a")),
+            xaxis=dict(title="", showgrid=False, tickfont=dict(size=12), dtick=1),
             legend=dict(orientation="h", y=1.1, x=0, font=dict(size=12)),
             bargap=0.28,
         )
         st.plotly_chart(fig_demand, use_container_width=True)
 
-    # Top 20 commodities + connected trend
     st.divider()
     st.subheader("Top 20 Most-Imported Commodity Sectors — Click to Explore Trend")
-    st.caption("Ranked by total import value (2015–2024). Select a commodity from the list below the chart to see its historical demand trend.")
+    st.caption("Ranked by total import value. Select a commodity to see its historical demand trend.")
 
     top_cmd = (
         pen.groupby(["cmdCode", "commodity"])["world_demand"]
@@ -1061,7 +979,6 @@ elif page == "Market Demand":
     top_cmd["label"] = top_cmd["cmdCode"].astype(str) + " — " + top_cmd["commodity"].str[:45]
     top_cmd["d_B"] = top_cmd["world_demand"] / 1e9
 
-    # Commodity selector — pre-filled with the top 20 in the same order as the chart
     sel_trend_label = st.selectbox(
         "🔍 Select commodity to view its demand trend (defaults to #1)",
         top_cmd["label"].tolist(),
@@ -1071,7 +988,6 @@ elif page == "Market Demand":
     sel_trend_code = top_cmd.loc[top_cmd["label"] == sel_trend_label, "cmdCode"].iloc[0]
     sel_trend_name = top_cmd.loc[top_cmd["label"] == sel_trend_label, "commodity"].iloc[0]
 
-    # Colour the selected bar in orange, others in teal
     bar_colors = [
         "#FF6B35" if lbl == sel_trend_label else "#1B9AAA"
         for lbl in top_cmd["label"]
@@ -1089,12 +1005,10 @@ elif page == "Market Demand":
         **CHART_LAYOUT,
         margin=dict(t=10, b=30, l=10, r=70), height=h20,
         yaxis=dict(autorange="reversed", tickfont=dict(size=12), showgrid=False),
-        xaxis=dict(title="Total Import Value 2015–2024 (USD Billions)",
-                   gridcolor="rgba(0,0,0,0.05)"),
+        xaxis=dict(title="Total Import Value (USD Billions)", gridcolor="rgba(0,0,0,0.05)"),
     )
     st.plotly_chart(fig_top20, use_container_width=True)
 
-    # Trend for selected commodity
     st.markdown(f"#### Import Demand Trend — {sel_trend_name}")
     if "year" in pen.columns:
         trend = pen[pen["cmdCode"] == sel_trend_code].groupby("year")["world_demand"].sum().reset_index()
@@ -1146,18 +1060,12 @@ elif page == "GCC Penetration":
 
     pen = require("gcc_export_penetration.csv")
 
-    # pen_scored is a 2022-2023 average per gcc_country × dest_country × cmdCode.
-    # To show combined GCC penetration (all 6 countries, all destinations) we:
-    #   1. Sum gcc_exports across all gcc_countries per (dest_country, cmdCode)
-    #   2. Take world_demand once per (dest_country, cmdCode) — not duplicated per GCC country
-    #   3. Sum across destinations to get commodity-level totals
-    #   4. Re-derive penetration_pct from the aggregated figures
     if "gcc_country" in pen.columns and "dest_country" in pen.columns:
         by_dest = (
             pen.groupby(["dest_country", "cmdCode", "commodity"])
             .agg(
                 gcc_exports=("gcc_exports", "sum"),
-                world_demand=("world_demand", "first"),  # same value per dest — not per GCC country
+                world_demand=("world_demand", "first"),
             )
             .reset_index()
         )
@@ -1171,16 +1079,14 @@ elif page == "GCC Penetration":
         ).clip(0, 100).round(2)
         data_label = "2022–2023 avg"
     else:
-        # Fallback: old format with year column
         latest_yr = int(pen["year"].max())
         snap = pen[pen["year"] == latest_yr].copy()
         data_label = str(latest_yr)
 
     _, col_c, _ = st.columns([0.5, 9, 0.5])
-
     with col_c:
         st.subheader(f"Sectors Where GCC Has the Strongest Market Presence ({data_label})")
-        st.caption(f"Top 15 commodity sectors by GCC export share of destination import demand. A high % means GCC suppliers already dominate that market.")
+        st.caption("Top 15 commodity sectors by GCC export share of destination import demand.")
         high = snap.sort_values("penetration_pct", ascending=False).head(15).copy()
         high["label"] = high["cmdCode"].astype(str) + " — " + high["commodity"].str[:50]
         fig2 = hbar(
@@ -1192,10 +1098,9 @@ elif page == "GCC Penetration":
 
     st.divider()
     _, col_c2, _ = st.columns([0.5, 9, 0.5])
-
     with col_c2:
         st.subheader(f"High-Demand Sectors With Low GCC Penetration — Untapped Opportunities ({data_label})")
-        st.caption("Commodity sectors in the top 50% of global import demand where GCC supplies less than 5% of total imports. These represent the largest addressable whitespace for GCC exporters.")
+        st.caption("Commodity sectors in the top 50% of global import demand where GCC supplies less than 5% of total imports.")
         gaps = snap[(snap["penetration_pct"] < 5) &
                     (snap["world_demand"] > snap["world_demand"].quantile(0.5))]
         gaps = gaps.sort_values("world_demand", ascending=False).head(15).copy()
@@ -1210,27 +1115,28 @@ elif page == "GCC Penetration":
             st.plotly_chart(fig3, use_container_width=True)
 
 
-
 # ═══════════════════════════════════════════════════════════════════════════
 # DEMAND FORECASTS
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Demand Forecasts":
     st.title("4-Year Import Demand Forecasts (2025–2028)")
-    st.markdown("Holt-Winters exponential smoothing forecasts of global import demand per commodity sector, trained on 2015–2024 historical data. The shaded band shows the 95% confidence interval.")
+    st.markdown("Holt-Winters exponential smoothing forecasts of global import demand per commodity sector, trained on 2015–2024 historical data.")
 
     files = require("demand_forecast_global.csv", "gcc_export_penetration.csv")
     fc = files["demand_forecast_global.csv"]
     pen = files["gcc_export_penetration.csv"]
-    hist = pen.groupby(["cmdCode", "commodity", "year"])["world_demand"].sum().reset_index()
 
-    # GCC exporter filter
+    if "year" in pen.columns:
+        hist = pen.groupby(["cmdCode", "commodity", "year"])["world_demand"].sum().reset_index()
+    else:
+        hist = pd.DataFrame(columns=["cmdCode", "commodity", "year", "world_demand"])
+
     opp_fc = load_opp()
     col_gcc_fc, col_spacer = st.columns([1, 2])
     with col_gcc_fc:
         gcc_options = ["All GCC"] + (sorted(opp_fc["gcc_country"].unique().tolist()) if opp_fc is not None else [])
         gcc_fc_sel = st.selectbox("Filter by GCC Exporter", gcc_options, key="fc_gcc")
 
-    # If a specific GCC country is selected, restrict commodity list to its top-ranked commodities
     if gcc_fc_sel != "All GCC" and opp_fc is not None:
         top_cmds = (
             opp_fc[opp_fc["gcc_country"] == gcc_fc_sel]
@@ -1252,20 +1158,20 @@ elif page == "Demand Forecasts":
 
     labels = fc_totals.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     code_map = dict(zip(labels, fc_totals["cmdCode"]))
-    selected = st.selectbox("Select a commodity", labels[:80])
+    selected = st.selectbox("🔍 Search or select a commodity", labels[:80])
     sel_code = code_map[selected]
 
     h = hist[hist["cmdCode"] == sel_code].sort_values("year")
     f = fc[fc["cmdCode"] == sel_code].sort_values("year")
     cname = f["commodity"].iloc[0] if len(f) > 0 else sel_code
 
-    # Forecast chart
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=h["year"], y=h["world_demand"], mode="lines+markers", name="Historical",
-        line=dict(color="#0F4C75", width=2.5),
-        marker=dict(size=7, color="#0F4C75", line=dict(color="white", width=1.5)),
-    ))
+    if not h.empty:
+        fig.add_trace(go.Scatter(
+            x=h["year"], y=h["world_demand"], mode="lines+markers", name="Historical",
+            line=dict(color="#0F4C75", width=2.5),
+            marker=dict(size=7, color="#0F4C75", line=dict(color="white", width=1.5)),
+        ))
     if not f.empty and not h.empty:
         bridge_yr = h["year"].max()
         bv = h.loc[h["year"] == bridge_yr, "world_demand"]
@@ -1281,9 +1187,16 @@ elif page == "Demand Forecasts":
             line=dict(color="#D62828", width=2.5, dash="dash"),
             marker=dict(size=7, color="#D62828", line=dict(color="white", width=1.5)),
         ))
+    elif not f.empty:
+        fig.add_trace(go.Scatter(
+            x=f["year"], y=f["demand_ensemble"], mode="lines+markers", name="Forecast",
+            line=dict(color="#D62828", width=2.5, dash="dash"),
+            marker=dict(size=7, color="#D62828", line=dict(color="white", width=1.5)),
+        ))
     fig.update_layout(
         **CHART_LAYOUT,
-        title=dict(text=f"Historical & Projected Global Import Demand — {cname} (2015–2028)", font=dict(size=14, color="#1a3a5c")),
+        title=dict(text=f"Historical & Projected Global Import Demand — {cname} (2015–2028)",
+                   font=dict(size=14, color="#1a3a5c")),
         yaxis=dict(title="Import Demand (USD)", gridcolor="rgba(0,0,0,0.05)"),
         xaxis=dict(title="", gridcolor="rgba(0,0,0,0.05)"),
         margin=dict(t=50, b=30), height=430,
@@ -1291,7 +1204,6 @@ elif page == "Demand Forecasts":
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Forecast table
     if not f.empty:
         st.subheader(f"Projected Annual Import Demand — {cname} (2025–2028)")
         tbl = f[["year", "demand_ensemble"]].copy()
@@ -1299,10 +1211,15 @@ elif page == "Demand Forecasts":
         tbl["Forecast"] = tbl["Forecast"].apply(fmt_usd)
         st.dataframe(tbl, use_container_width=True, hide_index=True)
 
-    # Top forecasted markets
     st.divider()
-    st.subheader(f"Top 15 Commodity Sectors by Total Projected Import Demand (2025–2028){' — ' + gcc_fc_sel if gcc_fc_sel != 'All GCC' else ''}")
-    st.caption("Ranked by the sum of 4-year Holt-Winters demand forecasts across all destination markets." + (f" Filtered to commodities relevant for {gcc_fc_sel} based on opportunity scores." if gcc_fc_sel != "All GCC" else ""))
+    st.subheader(
+        f"Top 15 Commodity Sectors by Total Projected Import Demand (2025–2028)"
+        f"{' — ' + gcc_fc_sel if gcc_fc_sel != 'All GCC' else ''}"
+    )
+    st.caption(
+        "Ranked by the sum of 4-year Holt-Winters demand forecasts."
+        + (f" Filtered to commodities relevant for {gcc_fc_sel}." if gcc_fc_sel != "All GCC" else "")
+    )
     top_fc = fc_totals.head(15).copy()
     top_fc["label"] = top_fc["cmdCode"].astype(str) + " — " + top_fc["commodity"].str[:45]
     top_fc["d_B"] = top_fc["demand_ensemble"] / 1e9
