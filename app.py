@@ -349,7 +349,6 @@ with st.sidebar:
         "Navigate",
         _pages,
         index=_pages.index(st.session_state["nav_page"]),
-        key="sidebar_nav",
         label_visibility="collapsed",
     )
     # Keep session state in sync with manual sidebar clicks
@@ -464,7 +463,6 @@ if page == "Home":
             if st.button(f"Open {title} →", key=f"nav_{title}",
                          use_container_width=True):
                 st.session_state["nav_page"] = title
-                st.session_state["sidebar_nav"] = title
                 st.rerun()
 
     st.divider()
