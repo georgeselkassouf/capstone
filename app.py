@@ -339,19 +339,16 @@ with st.sidebar:
     _pages = ["Home", "Opportunity Finder", "Executive Summary", "Market Demand",
               "GCC Penetration", "Demand Forecasts"]
 
-    # Allow Home page module cards to trigger navigation via session state
-    if "nav_page" not in st.session_state:
-        st.session_state["nav_page"] = "Home"
+    # Initialise — only runs on first load
+    if "sidebar_nav" not in st.session_state:
+        st.session_state["sidebar_nav"] = "Home"
 
     page = st.radio(
         "Navigate",
         _pages,
-        index=_pages.index(st.session_state["nav_page"]),
         key="sidebar_nav",
         label_visibility="collapsed",
     )
-    # Keep session state in sync with manual sidebar clicks
-    st.session_state["nav_page"] = page
 
     st.divider()
     st.caption("Data: UN Comtrade")
@@ -461,7 +458,7 @@ if page == "Home":
             )
             if st.button(f"Open {title} →", key=f"nav_{title}",
                          use_container_width=True):
-                st.session_state["nav_page"] = title
+                st.session_state["sidebar_nav"] = title
                 st.rerun()
 
     st.divider()
@@ -660,32 +657,16 @@ elif page == "Opportunity Finder":
     cmd_labels = cmd_scores.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
     cmd_code_map = dict(zip(cmd_labels, cmd_scores["cmdCode"]))
 
-    with col_cmd:
-        search_term = st.text_input(
-            "🔍 Search commodity (keyword or HS code)",
-            placeholder="e.g. motors, aluminium, dairy, 8501…",
-            key=f"cmd_search_{gcc_sel}",
-        )
-
     if not cmd_labels:
         st.warning("No commodities found for this GCC country.")
         st.stop()
 
-    # True substring filter — works for any keyword mid-label (e.g. "motors")
-    if search_term.strip():
-        term_lower = search_term.strip().lower()
-        filtered_labels = [lbl for lbl in cmd_labels if term_lower in lbl.lower()]
-        if not filtered_labels:
-            st.warning(f"No commodities matching **'{search_term}'** for {gcc_sel}. Try a broader keyword.")
-            st.stop()
-    else:
-        filtered_labels = cmd_labels   # all, ordered by opportunity score
-
-    cmd_sel = st.selectbox(
-        f"Select commodity — {len(filtered_labels)} result(s), sorted by opportunity score ↓",
-        filtered_labels,
-        key=f"cmd_sel_{gcc_sel}_{search_term}",
-    )
+    with col_cmd:
+        cmd_sel = st.selectbox(
+            "🔍 Commodity — sorted by opportunity score ↓ (type HS code to search)",
+            cmd_labels,
+            key=f"cmd_sel_{gcc_sel}",
+        )
     sel_code = cmd_code_map[cmd_sel]
     df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
     if df.empty:
@@ -704,39 +685,42 @@ elif page == "Opportunity Finder":
         "scored markets",
     )
 
-    # GCC Exports for this country + commodity
-    # Strategy: try gcc_export_penetration.csv filtered by gcc_country first;
-    # if that column doesn't exist or yields 0, estimate from penetration_pct * demand
+    # ── GCC country exports KPI ───────────────────────────────────────────────
+    # gcc_export_penetration.csv stores GCC-COMBINED exports — not per-country.
+    # Using it directly gives the same number for every GCC country on the same commodity.
+    #
+    # Correct approach: penetration_pct in `opp` IS per-(gcc_country, cmdCode, dest_country),
+    # computed as gcc_sel_exports_to_dest / world_demand_of_dest in the scoring loop.
+    # So:  gcc_sel_exports_to_dest = (penetration_pct / 100) × world_demand_of_dest
+    # Summing across all scored destinations gives the estimated total exports for gcc_sel.
     pen_data = load("gcc_export_penetration.csv")
     gcc_exp_val = 0
-    exp_label = "—"
-    exp_year = ""
-    if pen_data is not None and "gcc_exports" in pen_data.columns:
-        latest_pen_yr = int(pen_data["year"].max())
-        exp_year = str(latest_pen_yr)
-        # Filter by country if the column exists, otherwise fall back to GCC-wide
-        if "gcc_country" in pen_data.columns:
-            cmd_pen = pen_data[
-                (pen_data["gcc_country"] == gcc_sel) &
-                (pen_data["cmdCode"] == sel_code) &
-                (pen_data["year"] == latest_pen_yr)
-            ]
-        else:
-            cmd_pen = pen_data[
-                (pen_data["cmdCode"] == sel_code) &
-                (pen_data["year"] == latest_pen_yr)
-            ]
-        gcc_exp_val = float(cmd_pen["gcc_exports"].sum()) if not cmd_pen.empty else 0
+    exp_label = f"{gcc_sel} exports est., 2024"
 
-    # If still 0, estimate from penetration_pct × demand_4y_total / 4 (annual proxy)
-    if gcc_exp_val == 0 and "penetration_pct" in df.columns and "demand_4y_total" in df.columns:
-        avg_pen = float(df["penetration_pct"].mean()) / 100.0
-        total_demand_annual = float(df["demand_4y_total"].sum()) / 4.0
-        gcc_exp_val = avg_pen * total_demand_annual
-        exp_label = f"est. from pen. gap"
-        exp_year = "2024 est."
-    else:
-        exp_label = f"{gcc_sel} exports, {exp_year}" if exp_year else "GCC combined"
+    if (pen_data is not None
+            and "world_demand" in pen_data.columns
+            and "dest_country" in pen_data.columns
+            and "year" in pen_data.columns):
+        latest_yr = int(pen_data["year"].max())
+        pen_cmd = pen_data[
+            (pen_data["cmdCode"] == sel_code) & (pen_data["year"] == latest_yr)
+        ][["dest_country", "world_demand"]]
+        df_with_wd = df.merge(pen_cmd, on="dest_country", how="left")
+        gcc_exp_val = float(
+            (df_with_wd["penetration_pct"] / 100.0 * df_with_wd["world_demand"])
+            .fillna(0).sum()
+        )
+        exp_label = f"{gcc_sel} exports est., {latest_yr}"
+    elif pen_data is not None and "gcc_country" in pen_data.columns:
+        # Rare case where per-country column does exist — use it directly
+        latest_yr = int(pen_data["year"].max())
+        cmd_pen = pen_data[
+            (pen_data["gcc_country"] == gcc_sel) &
+            (pen_data["cmdCode"] == sel_code) &
+            (pen_data["year"] == latest_yr)
+        ]
+        gcc_exp_val = float(cmd_pen["gcc_exports"].sum()) if not cmd_pen.empty else 0
+        exp_label = f"{gcc_sel} exports, {latest_yr}"
 
     k2.metric(
         f"{gcc_sel} Exports — {commodity_name[:28]}",
