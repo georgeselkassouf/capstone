@@ -406,7 +406,7 @@ if page == "Home":
          "5% market share — the clearest signal of untapped diversification potential."),
         ("#D62828", "📉", "Demand Forecasts",
          "4-year projections (2025–2028)",
-         "Holt-Winters forecasts per commodity, filterable by GCC "
+         "Holt-Winters forecasts with 95% confidence intervals per commodity, filterable by GCC "
          "exporter. Includes a projected demand table and a ranking of top forecast opportunities."),
     ]
 
@@ -622,7 +622,7 @@ elif page == "Opportunity Finder":
 
     with col_cmd:
         cmd_sel = st.selectbox(
-            "🔍 Search or select commodity",
+            "🔍 Search or select commodity — sorted by opportunity score ↓",
             cmd_labels,
             index=0,
             key=f"cmd_sel_{gcc_sel}",
@@ -742,12 +742,13 @@ elif page == "Opportunity Finder":
 <div style="background:#f4f7fc;border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:0.82rem;color:#1a3a5c;line-height:1.9;">
 <b>Column guide:</b> &nbsp;
 <b>Score</b> — composite opportunity score (0–1, higher = more attractive). &nbsp;·&nbsp;
-<b>Grade</b> — country viability tier (A+/A/B/C/D) based on World Bank governance & economic indicators. &nbsp;·&nbsp;
+<b>Grade</b> — country viability tier (A+/A/B/C/D) based on World Bank governance &amp; economic indicators. &nbsp;·&nbsp;
 <b>4Y Demand</b> — total forecasted import demand for this commodity in that market over 2025–2028. &nbsp;·&nbsp;
-<b>ML Growth Probability</b> — Random Forest + XGBoost probability (0–1) that this market will show above-median structural growth. &nbsp;·&nbsp;
-<b>LPI</b> — World Bank Logistics Performance Index score (1–5) for the destination; higher = easier to ship to. &nbsp;·&nbsp;
-<b>Tariff %</b> — MFN applied tariff rate (%) faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
-<b>Transport</b> — recommended shipping mode based on distance, LPI, and commodity weight.
+<b>ML Growth Probability</b> — ensemble probability (RF + XGBoost) that this market will show above-median structural export growth. &nbsp;·&nbsp;
+<b>LPI</b> — World Bank Logistics Performance Index (1–5); higher = easier to ship to. &nbsp;·&nbsp;
+<b>Tariff %</b> — MFN applied tariff rate faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
+<b>Distance (km)</b> — haversine distance from GCC exporter to destination, weighted by commodity type sensitivity. &nbsp;·&nbsp;
+<b>Rationale</b> — plain-language summary of the key drivers behind this market's opportunity score.
 </div>
     """, unsafe_allow_html=True)
 
@@ -828,6 +829,7 @@ elif page == "Opportunity Finder":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Executive Summary":
     st.title("Executive Summary")
+    st.markdown("Where should GCC countries focus non-fuel export efforts over the next 3–5 years?")
 
     opp = load_opp()
     if opp is None:
@@ -898,19 +900,20 @@ elif page == "Executive Summary":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Market Demand":
     st.title("Destination Market Demand")
+    st.markdown("What do the 40 destination countries import — and which commodities matter most?")
 
     pen = require("gcc_export_penetration.csv")
+    hist_global = load("demand_history_global.csv")
 
-    if "year" not in pen.columns:
-        st.info(
-            "ℹ️ Year-level historical demand trend is not available in the current "
-            "data version. `gcc_export_penetration.csv` is a 2022–2023 average "
-            "with no `year` column. The top-commodity ranking below is still fully functional."
+    # ── Annual demand trend (from demand_history_global.csv) ─────────────────
+    if hist_global is not None and "year" in hist_global.columns:
+        yearly = (
+            hist_global.groupby("year")["world_demand_value"]
+            .sum().reset_index()
+            .rename(columns={"world_demand_value": "world_demand"})
+            .sort_values("year").reset_index(drop=True)
         )
-    else:
-        yearly = pen.groupby("year")["world_demand"].sum().reset_index()
         yearly["d_T"] = yearly["world_demand"] / 1e12
-        yearly = yearly.sort_values("year").reset_index(drop=True)
         yearly["yoy_growth"] = yearly["d_T"].pct_change() * 100
 
         st.subheader("Annual Combined Import Demand Across 40 Destination Markets (2015–2024)")
@@ -948,36 +951,42 @@ elif page == "Market Demand":
                         zerolinewidth=1.5, ticksuffix="%", tickformat="+.1f",
                         tickfont=dict(size=12, color="#c4420a"),
                         title_font=dict(size=12, color="#c4420a")),
-            xaxis=dict(title="", showgrid=False, tickfont=dict(size=12), dtick=1),
+            xaxis=dict(title="", showgrid=False, tickfont=dict(size=12), dtick=1, tickformat="d"),
             legend=dict(orientation="h", y=1.1, x=0, font=dict(size=12)),
             bargap=0.28,
         )
         st.plotly_chart(fig_demand, use_container_width=True)
+        st.divider()
 
-    st.divider()
-    st.subheader("Top 20 Most-Imported Commodity Sectors — Click to Explore Trend")
+    # ── Top 20 commodities ────────────────────────────────────────────────────
+    st.subheader("Top 20 Most-Imported Commodity Sectors")
     st.caption("Ranked by total import value. Select a commodity to see its historical demand trend.")
 
-    top_cmd = (
-        pen.groupby(["cmdCode", "commodity"])["world_demand"]
-        .sum().reset_index().sort_values("world_demand", ascending=False).head(20)
-    )
+    # Use demand_history_global for commodity totals if available, else pen_scored
+    if hist_global is not None:
+        top_cmd = (
+            hist_global.groupby(["cmdCode", "commodity"])["world_demand_value"]
+            .sum().reset_index()
+            .rename(columns={"world_demand_value": "world_demand"})
+            .sort_values("world_demand", ascending=False).head(20)
+        )
+    else:
+        top_cmd = (
+            pen.groupby(["cmdCode", "commodity"])["world_demand"]
+            .sum().reset_index().sort_values("world_demand", ascending=False).head(20)
+        )
+
     top_cmd["label"] = top_cmd["cmdCode"].astype(str) + " — " + top_cmd["commodity"].str[:45]
     top_cmd["d_B"] = top_cmd["world_demand"] / 1e9
 
     sel_trend_label = st.selectbox(
-        "🔍 Select commodity to view its demand trend (defaults to #1)",
-        top_cmd["label"].tolist(),
-        index=0,
-        key="md_trend_sel",
+        "🔍 Select commodity to view its demand trend",
+        top_cmd["label"].tolist(), index=0, key="md_trend_sel",
     )
     sel_trend_code = top_cmd.loc[top_cmd["label"] == sel_trend_label, "cmdCode"].iloc[0]
     sel_trend_name = top_cmd.loc[top_cmd["label"] == sel_trend_label, "commodity"].iloc[0]
 
-    bar_colors = [
-        "#FF6B35" if lbl == sel_trend_label else "#1B9AAA"
-        for lbl in top_cmd["label"]
-    ]
+    bar_colors = ["#FF6B35" if lbl == sel_trend_label else "#1B9AAA" for lbl in top_cmd["label"]]
     fig_top20 = go.Figure()
     fig_top20.add_trace(go.Bar(
         y=top_cmd["label"], x=top_cmd["d_B"], orientation="h",
@@ -995,16 +1004,21 @@ elif page == "Market Demand":
     )
     st.plotly_chart(fig_top20, use_container_width=True)
 
+    # ── Per-commodity trend ───────────────────────────────────────────────────
     st.markdown(f"#### Import Demand Trend — {sel_trend_name}")
-    if "year" in pen.columns:
-        trend = pen[pen["cmdCode"] == sel_trend_code].groupby("year")["world_demand"].sum().reset_index()
-        trend["d_B"] = trend["world_demand"] / 1e9
-        trend = trend.sort_values("year")
+    if hist_global is not None:
+        trend = (
+            hist_global[hist_global["cmdCode"] == sel_trend_code]
+            .groupby("year")["world_demand_value"].sum().reset_index()
+            .rename(columns={"world_demand_value": "d_val"})
+            .sort_values("year")
+        )
+        trend["d_B"] = trend["d_val"] / 1e9
         trend["yoy"] = trend["d_B"].pct_change() * 100
 
         fig_trend = go.Figure()
         fig_trend.add_trace(go.Scatter(
-            x=trend["year"], y=trend["d_B"], mode="lines+markers",
+            x=trend["year"].astype(int), y=trend["d_B"], mode="lines+markers",
             name="Import Demand",
             line=dict(color="#0F4C75", width=2.5),
             marker=dict(size=7, color="#0F4C75", line=dict(color="white", width=1.5)),
@@ -1012,7 +1026,7 @@ elif page == "Market Demand":
             yaxis="y1",
         ))
         fig_trend.add_trace(go.Bar(
-            x=trend["year"], y=trend["yoy"],
+            x=trend["year"].astype(int), y=trend["yoy"],
             name="YoY Growth %",
             marker=dict(
                 color=["#D62828" if (v < 0) else "#2e86de" for v in trend["yoy"].fillna(0)],
@@ -1028,13 +1042,13 @@ elif page == "Market Demand":
             yaxis2=dict(title="YoY Growth (%)", overlaying="y", side="right",
                         showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.2)",
                         ticksuffix="%"),
-            xaxis=dict(title="", showgrid=False),
+            xaxis=dict(title="", showgrid=False, tickformat="d"),
             legend=dict(orientation="h", y=1.08, x=0),
             barmode="overlay",
         )
         st.plotly_chart(fig_trend, use_container_width=True)
     else:
-        st.info("Year-level per-commodity trend not available in current data version.")
+        st.info("Add `demand_history_global.csv` from the notebook to see per-commodity trends.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1042,6 +1056,7 @@ elif page == "Market Demand":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "GCC Penetration":
     st.title("GCC Export Penetration")
+    st.markdown("**Penetration %** = Combined GCC exports / destination import demand. Low penetration + high demand = opportunity. Figures aggregate all 6 GCC member states.")
 
     pen = require("gcc_export_penetration.csv")
 
@@ -1105,6 +1120,7 @@ elif page == "GCC Penetration":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Demand Forecasts":
     st.title("4-Year Import Demand Forecasts (2025–2028)")
+    st.markdown("Holt-Winters exponential smoothing forecasts of global import demand per commodity sector, trained on 2015–2024 historical data.")
 
     files = require("demand_forecast_global.csv", "gcc_export_penetration.csv")
     fc = files["demand_forecast_global.csv"]
@@ -1229,11 +1245,12 @@ elif page == "Demand Forecasts":
             font=dict(size=11, color="#888"), xanchor="left", xshift=6,
         )] if not f.empty else [],
     )
-    
-    st.info("ℹ️ Historical data not available. Add `demand_history_global.csv` from the notebook to show the full 2015–2028 chart.")
-    
-    # Always plot the chart
-    st.plotly_chart(fig, use_container_width=True)
+    if not h.empty:
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("ℹ️ Historical data not available. Add `demand_history_global.csv` from the notebook to show the full 2015–2028 chart.")
+        if not f.empty:
+            st.plotly_chart(fig, use_container_width=True)
 
     if not f.empty:
         st.subheader(f"Projected Annual Import Demand — {cname} (2025–2028)")
