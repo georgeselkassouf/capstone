@@ -350,10 +350,10 @@ if page == "Home":
               text-transform:uppercase;margin-bottom:0.9rem;'>
     OCO Global &nbsp;·&nbsp; AUB MSBA Capstone &nbsp;·&nbsp; Spring 2026
   </div>
-  <h1 style='font-size:2.6rem;font-weight:900;color:#ffffff;line-height:1.15;
+  <div style='font-size:2.6rem;font-weight:900;color:#ffffff !important;line-height:1.15;
              margin:0 0 1rem;letter-spacing:-0.02em;'>
     GCC Export<br>Opportunity Engine
-  </h1>
+  </div>
   <p style='font-size:1.05rem;color:#b8cde0;max-width:680px;line-height:1.75;margin:0 0 2rem;'>
     A decision-support platform that identifies, scores, and ranks the highest-potential
     non-fuel export opportunities for all six GCC member states — powered by demand
@@ -382,51 +382,6 @@ if page == "Home":
       <div style='font-size:2rem;font-weight:800;color:#ffffff;line-height:1;'>4 yrs</div>
       <div style='font-size:0.72rem;color:#7aabcf;text-transform:uppercase;
                   letter-spacing:0.1em;margin-top:0.3rem;'>Demand Forecast</div>
-    </div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-    # ── Analytical pipeline ───────────────────────────────────────────────────
-    st.markdown("<div style='height:0.2rem'></div>", unsafe_allow_html=True)
-    st.markdown("""
-<div style='background:#f4f7fc;border-radius:12px;padding:1.4rem 2rem;margin-bottom:0.2rem;'>
-  <div style='font-size:0.68rem;font-weight:700;color:#6b7a8d;letter-spacing:0.15em;
-              text-transform:uppercase;margin-bottom:1rem;'>Analytical Pipeline</div>
-  <div style='display:flex;align-items:center;gap:0;flex-wrap:wrap;'>
-    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
-                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
-      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>📦</div>
-      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>UN Comtrade</div>
-      <div style='font-size:0.68rem;color:#8a9ab0;'>HS4 · 2015–2024</div>
-    </div>
-    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
-    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
-                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
-      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>📈</div>
-      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>Demand Forecast</div>
-      <div style='font-size:0.68rem;color:#8a9ab0;'>Holt-Winters ETS</div>
-    </div>
-    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
-    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
-                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
-      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>🤖</div>
-      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>ML Classifier</div>
-      <div style='font-size:0.68rem;color:#8a9ab0;'>RF + XGBoost</div>
-    </div>
-    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
-    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
-                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
-      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>⚖️</div>
-      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>Composite Score</div>
-      <div style='font-size:0.68rem;color:#8a9ab0;'>6 weighted criteria</div>
-    </div>
-    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
-    <div style='background:#0f2847;border:1px solid #0f2847;border-radius:8px;
-                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
-      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>🏆</div>
-      <div style='font-size:0.78rem;font-weight:700;color:#ffffff;'>Ranked Markets</div>
-      <div style='font-size:0.68rem;color:#7aabcf;'>Per GCC country</div>
     </div>
   </div>
 </div>
@@ -485,6 +440,50 @@ if page == "Home":
             )
 
     st.divider()
+
+    # ── Analytical pipeline ───────────────────────────────────────────────────
+    st.markdown("""
+<div style='background:#f4f7fc;border-radius:12px;padding:1.4rem 2rem;margin-bottom:0.2rem;'>
+  <div style='font-size:0.68rem;font-weight:700;color:#6b7a8d;letter-spacing:0.15em;
+              text-transform:uppercase;margin-bottom:1rem;'>Analytical Pipeline</div>
+  <div style='display:flex;align-items:center;gap:0;flex-wrap:wrap;'>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>📦</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>UN Comtrade</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>HS4 · 2015–2024</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>📈</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>Demand Forecast</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>Holt-Winters ETS</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>🤖</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>ML Classifier</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>RF + XGBoost</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>⚖️</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>Composite Score</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>6 weighted criteria</div>
+    </div>
+    <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
+    <div style='background:#0f2847;border:1px solid #0f2847;border-radius:8px;
+                padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
+      <div style='font-size:1.2rem;margin-bottom:0.2rem;'>🏆</div>
+      <div style='font-size:0.78rem;font-weight:700;color:#ffffff;'>Ranked Markets</div>
+      <div style='font-size:0.68rem;color:#7aabcf;'>Per GCC country</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
     # ── Scoring methodology ───────────────────────────────────────────────────
     st.markdown(
