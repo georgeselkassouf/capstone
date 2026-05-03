@@ -343,10 +343,10 @@ with st.sidebar:
             <div style='border-top:1px solid rgba(255,255,255,0.08);padding-top:1rem;
                         display:flex;align-items:center;justify-content:space-between;gap:0.8rem;'>
                 <img src='data:image/png;base64,{OCO_LOGO_B64}'
-                     style='height:28px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
-                <div style='width:1px;height:24px;background:rgba(255,255,255,0.15);'></div>
+                     style='height:44px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
+                <div style='width:1px;height:36px;background:rgba(255,255,255,0.15);'></div>
                 <img src='data:image/png;base64,{AUB_LOGO_B64}'
-                     style='height:28px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
+                     style='height:44px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
             </div>
         </div>
         """,
@@ -1216,7 +1216,7 @@ elif page == "GCC Penetration":
         st.subheader(f"Sectors Where GCC Has the Strongest Market Presence ({data_label})")
         st.caption(f"Top 15 commodity sectors by {'combined GCC' if gcc_pen_sel == 'All GCC' else gcc_pen_sel} export share of destination import demand." + (" Restricted to sectors in the top 70% of global import demand." if gcc_pen_sel == "All GCC" else ""))
         if gcc_pen_sel == "All GCC":
-            demand_floor = snap["world_demand"].quantile(0.3)
+            demand_floor = snap["world_demand"].quantile(0.4)
             high = (
                 snap[snap["world_demand"] >= demand_floor]
                 .sort_values("penetration_pct", ascending=False)
