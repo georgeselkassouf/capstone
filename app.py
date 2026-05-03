@@ -67,6 +67,16 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
+    /* Hero title — must outrank the h1 rule above */
+    .hero-title {
+        color: #ffffff !important;
+        font-size: 2.6rem !important;
+        font-weight: 900 !important;
+        line-height: 1.15 !important;
+        margin: 0 0 1rem !important;
+        letter-spacing: -0.02em !important;
+    }
+
     /* Dataframes */
     .stDataFrame {
         border-radius: 8px;
@@ -350,8 +360,7 @@ if page == "Home":
               text-transform:uppercase;margin-bottom:0.9rem;'>
     OCO Global &nbsp;·&nbsp; AUB MSBA Capstone &nbsp;·&nbsp; Spring 2026
   </div>
-  <div style='font-size:2.6rem;font-weight:900;color:#ffffff !important;line-height:1.15;
-             margin:0 0 1rem;letter-spacing:-0.02em;'>
+  <div class='hero-title'>
     GCC Export<br>Opportunity Engine
   </div>
   <p style='font-size:1.05rem;color:#b8cde0;max-width:680px;line-height:1.75;margin:0 0 2rem;'>
@@ -637,7 +646,7 @@ elif page == "Opportunity Finder":
 
     with col_cmd:
         cmd_sel = st.selectbox(
-            "🔍 Commodity (type to search)",
+            "🔍 Commodity — sorted by opportunity score ↓ (type to search)",
             cmd_labels,
             help="Start typing a keyword — e.g. plastic, aluminium, dairy — to filter the list.",
         )
