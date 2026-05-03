@@ -6,6 +6,7 @@ OCO Global x AUB MSBA Capstone
 import streamlit as st
 import pandas as pd
 import numpy as np
+import re
 import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
@@ -521,8 +522,20 @@ elif page == "Opportunity Finder":
         gcc_sel = st.selectbox("GCC Exporter", sorted(opp["gcc_country"].unique()))
 
     df_gcc = opp[opp["gcc_country"] == gcc_sel].copy()
+
+    # Only show commodities where this GCC country has actual exports.
+    # penetration_pct is computed as gcc_country_exports / world_demand inside
+    # the per-GCC scoring loop, so it is strictly > 0 only when that specific
+    # GCC country has real recorded export flows for the commodity.
+    # uv_mean is NOT a reliable proxy because it can be non-null even for
+    # zero-export rows if the notebook imputes a global average value.
+    exported_cmds = (
+        df_gcc[df_gcc["penetration_pct"] > 0]["cmdCode"].unique()
+    )
+    df_gcc_exported = df_gcc[df_gcc["cmdCode"].isin(exported_cmds)]
+
     cmd_scores = (
-        df_gcc.groupby(["cmdCode", "commodity"])["opportunity_score"]
+        df_gcc_exported.groupby(["cmdCode", "commodity"])["opportunity_score"]
         .max().reset_index().sort_values("opportunity_score", ascending=False)
     )
     cmd_labels = cmd_scores.apply(lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1).tolist()
@@ -538,7 +551,7 @@ elif page == "Opportunity Finder":
         st.warning("No commodities found for this GCC country.")
         st.stop()
     sel_code = cmd_code_map[cmd_sel]
-    df = df_gcc[df_gcc["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
+    df = df_gcc_exported[df_gcc_exported["cmdCode"] == sel_code].sort_values("opportunity_score", ascending=False).copy()
     if df.empty:
         st.info("No scored opportunities for this combination.")
         st.stop()
@@ -678,7 +691,12 @@ elif page == "Opportunity Finder":
         table["Transport"] = table["Transport"].apply(
             lambda x: f"{TRANSPORT_ICONS.get(str(x), '')} {x}" if pd.notna(x) else "—")
     if "Rationale" in table.columns:
-        table["Rationale"] = table["Rationale"].str[:90]
+        table["Rationale"] = (
+            table["Rationale"]
+            .str.replace(r'\s*\([^)]*\)', '', regex=True)
+            .str.strip()
+            .str[:90]
+        )
     st.dataframe(table, use_container_width=True, hide_index=True, height=min(620, len(df_top) * 42 + 50))
 
     # Commodity-level metrics (same across all destinations — shown as cards, not table columns)
@@ -716,7 +734,9 @@ elif page == "Opportunity Finder":
                 st.markdown(
                     f"**{row['dest_country']}** · Score **{row['opportunity_score']:.3f}** · "
                     f"Grade {row.get('grade', '—')} · {icon} {transport}")
-                st.caption(row.get("opportunity_rationale", "—"))
+                raw_rat = row.get("opportunity_rationale", "—") or "—"
+                clean_rat = re.sub(r'\s*\([^)]*\)', '', str(raw_rat)).strip()
+                st.caption(clean_rat)
                 st.markdown("---")
 
     # Download
