@@ -1264,22 +1264,15 @@ elif page == "Demand Forecasts":
         bv = h.loc[h["year"] == bridge_yr, "world_demand"]
         if not bv.empty:
             f_ext = pd.concat([
-                pd.DataFrame({"year": [bridge_yr], "demand_ensemble": [bv.iloc[0]],
-                               "ci_lower": [bv.iloc[0]], "ci_upper": [bv.iloc[0]]}),
-                f[["year", "demand_ensemble", "ci_lower", "ci_upper"]],
+                pd.DataFrame({"year": [bridge_yr], "demand_ensemble": [bv.iloc[0]]}),
+                f[["year", "demand_ensemble"]],
             ], ignore_index=True)
         else:
-            f_ext = f[["year", "demand_ensemble", "ci_lower", "ci_upper"]]
+            f_ext = f[["year", "demand_ensemble"]]
         fig.add_trace(go.Scatter(
             x=f_ext["year"], y=f_ext["demand_ensemble"], mode="lines+markers", name="Forecast",
             line=dict(color="#D62828", width=2.5, dash="dash"),
             marker=dict(size=7, color="#D62828", line=dict(color="white", width=1.5)),
-        ))
-        fig.add_trace(go.Scatter(
-            x=pd.concat([f_ext["year"], f_ext["year"][::-1]]),
-            y=pd.concat([f_ext["ci_upper"], f_ext["ci_lower"][::-1]]),
-            fill="toself", fillcolor="rgba(214,40,40,0.08)",
-            line=dict(width=0), name="Confidence Band",
         ))
     fig.update_layout(
         **CHART_LAYOUT,
@@ -1294,10 +1287,9 @@ elif page == "Demand Forecasts":
     # Forecast table
     if not f.empty:
         st.subheader(f"Projected Annual Import Demand — {cname} (2025–2028)")
-        tbl = f[["year", "demand_ensemble", "ci_lower", "ci_upper"]].copy()
-        tbl.columns = ["Year", "Forecast", "Lower Bound", "Upper Bound"]
-        for c in ["Forecast", "Lower Bound", "Upper Bound"]:
-            tbl[c] = tbl[c].apply(fmt_usd)
+        tbl = f[["year", "demand_ensemble"]].copy()
+        tbl.columns = ["Year", "Forecast"]
+        tbl["Forecast"] = tbl["Forecast"].apply(fmt_usd)
         st.dataframe(tbl, use_container_width=True, hide_index=True)
 
     # Top forecasted markets
