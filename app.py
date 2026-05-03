@@ -809,7 +809,7 @@ elif page == "Opportunity Finder":
     col_map = {
         "dest_country": "Target Market", "opportunity_score": "Score", "grade": "Grade",
         "demand_4y_total": "4Y Demand",
-        "ml_growth_prob": "ML Growth P",
+        "ml_growth_prob": "ML Growth Probability",
         "lpi_score": "LPI", "mfn_tariff_rate": "Tariff %",
         "weighted_dist_km": "Distance (km)", "dist_km": "Distance (km)",
         "recommended_transport": "Transport", "opportunity_rationale": "Rationale",
