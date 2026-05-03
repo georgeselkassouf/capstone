@@ -343,7 +343,7 @@ with st.sidebar:
             <div style='border-top:1px solid rgba(255,255,255,0.08);padding-top:1rem;
                         display:flex;align-items:center;justify-content:space-between;gap:0.8rem;'>
                 <img src='data:image/png;base64,{OCO_LOGO_B64}'
-                     style='height:44px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
+                     style='height:60px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
                 <div style='width:1px;height:36px;background:rgba(255,255,255,0.15);'></div>
                 <img src='data:image/png;base64,{AUB_LOGO_B64}'
                      style='height:44px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
