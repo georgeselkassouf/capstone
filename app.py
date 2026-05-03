@@ -1087,10 +1087,14 @@ elif page == "Market Demand":
 
         fig_trend = go.Figure()
         fig_trend.add_trace(go.Scatter(
-            x=trend["year"].astype(int), y=trend["d_B"], mode="lines+markers",
+            x=trend["year"].astype(int), y=trend["d_B"],
+            mode="lines+markers+text",
             name="Import Demand",
             line=dict(color="#0F4C75", width=2.5),
             marker=dict(size=7, color="#0F4C75", line=dict(color="white", width=1.5)),
+            text=[f"${v:.1f}B" for v in trend["d_B"]],
+            textposition="top center",
+            textfont=dict(size=9, color="#0F4C75"),
             hovertemplate="%{x}<br>Demand: $%{y:.1f}B<extra></extra>",
             yaxis="y1",
         ))
@@ -1101,17 +1105,32 @@ elif page == "Market Demand":
                 color=["#D62828" if (v < 0) else "#2e86de" for v in trend["yoy"].fillna(0)],
                 opacity=0.35, cornerradius=3, line=dict(width=0),
             ),
+            text=[f"{v:+.1f}%" if pd.notna(v) else "" for v in trend["yoy"]],
+            textposition="outside",
+            textfont=dict(size=9, color="#6b7a8d"),
             hovertemplate="%{x}<br>Growth: %{y:+.1f}%<extra></extra>",
             yaxis="y2",
         ))
+        # Set y-axis ranges with padding so labels don't clip
+        y1_min = trend["d_B"].min()
+        y1_max = trend["d_B"].max()
+        y1_pad = (y1_max - y1_min) * 0.25
+        yoy_abs = trend["yoy"].abs().max() if trend["yoy"].notna().any() else 10
         fig_trend.update_layout(
             **CHART_LAYOUT,
-            margin=dict(t=20, b=30, l=10, r=60), height=320,
-            yaxis=dict(title="USD (Billions)", gridcolor="rgba(0,0,0,0.05)"),
-            yaxis2=dict(title="YoY Growth (%)", overlaying="y", side="right",
-                        showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.2)",
-                        ticksuffix="%"),
-            xaxis=dict(title="", showgrid=False, tickformat="d"),
+            margin=dict(t=30, b=30, l=10, r=70), height=360,
+            yaxis=dict(
+                title="USD (Billions)", gridcolor="rgba(0,0,0,0.05)",
+                range=[y1_min - y1_pad, y1_max + y1_pad],
+                tickformat=".0f",
+            ),
+            yaxis2=dict(
+                title="YoY Growth (%)", overlaying="y", side="right",
+                showgrid=False, zeroline=True, zerolinecolor="rgba(0,0,0,0.2)",
+                ticksuffix="%", tickformat="+.1f",
+                range=[-(yoy_abs * 2.2), yoy_abs * 2.2],
+            ),
+            xaxis=dict(title="", showgrid=False, tickformat="d", dtick=1),
             legend=dict(orientation="h", y=1.08, x=0),
             barmode="overlay",
         )
@@ -1171,8 +1190,13 @@ elif page == "GCC Penetration":
     _, col_c, _ = st.columns([0.5, 9, 0.5])
     with col_c:
         st.subheader(f"Sectors Where GCC Has the Strongest Market Presence ({data_label})")
-        st.caption(f"Top 15 commodity sectors by {'combined GCC' if gcc_pen_sel == 'All GCC' else gcc_pen_sel} export share of destination import demand.")
-        high = snap.sort_values("penetration_pct", ascending=False).head(15).copy()
+        st.caption(f"Top 15 commodity sectors by {'combined GCC' if gcc_pen_sel == 'All GCC' else gcc_pen_sel} export share of destination import demand, restricted to sectors in the top 50% of global import demand.")
+        demand_floor = snap["world_demand"].quantile(0.5)
+        high = (
+            snap[snap["world_demand"] >= demand_floor]
+            .sort_values("penetration_pct", ascending=False)
+            .head(15).copy()
+        )
         high["label"] = high["cmdCode"].astype(str) + " — " + high["commodity"].str[:50]
         fig2 = hbar(
             high["label"], high["penetration_pct"], colorscale=PURPLE_SCALE,
@@ -1240,11 +1264,6 @@ elif page == "Demand Forecasts":
                          ascending=[False, False, False])
             .drop(columns=["_ranked"])
             .reset_index(drop=True)
-        )
-        st.caption(
-            f"📌 Commodities ranked for **{gcc_fc_sel}** appear first (sorted by opportunity score). "
-            f"All other commodities follow. Forecast values show **global** import demand — "
-            f"they reflect market size, not GCC export volume, and are the same regardless of which GCC country is selected."
         )
     else:
         fc_totals = fc_all.sort_values("demand_ensemble", ascending=False).reset_index(drop=True)
