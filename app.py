@@ -1125,28 +1125,44 @@ elif page == "Market Demand":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "GCC Penetration":
     st.title("GCC Export Penetration")
-    st.markdown("**Penetration %** = Combined GCC exports / destination import demand. Low penetration + high demand = opportunity. Figures aggregate all 6 GCC member states.")
+    st.markdown("**Penetration %** = GCC exports to destination / destination import demand. Low penetration + high demand = opportunity.")
 
     pen = require("gcc_export_penetration.csv")
 
+    # GCC country filter
+    gcc_options = ["All GCC"] + sorted(pen["gcc_country"].unique().tolist()) if "gcc_country" in pen.columns else ["All GCC"]
+    gcc_pen_sel = st.selectbox("GCC Exporter", gcc_options, key="pen_gcc_sel")
+
     if "gcc_country" in pen.columns and "dest_country" in pen.columns:
-        by_dest = (
-            pen.groupby(["dest_country", "cmdCode", "commodity"])
-            .agg(
-                gcc_exports=("gcc_exports", "sum"),
-                world_demand=("world_demand", "first"),
+        if gcc_pen_sel == "All GCC":
+            # Aggregate across all GCC countries — sum exports, take first for world_demand (same per dest×cmd)
+            by_dest = (
+                pen.groupby(["dest_country", "cmdCode", "commodity"])
+                .agg(
+                    gcc_exports=("gcc_exports", "sum"),
+                    world_demand=("world_demand", "first"),
+                )
+                .reset_index()
             )
-            .reset_index()
-        )
-        snap = (
-            by_dest.groupby(["cmdCode", "commodity"])
-            .agg(gcc_exports=("gcc_exports", "sum"), world_demand=("world_demand", "sum"))
-            .reset_index()
-        )
+            snap = (
+                by_dest.groupby(["cmdCode", "commodity"])
+                .agg(gcc_exports=("gcc_exports", "sum"), world_demand=("world_demand", "sum"))
+                .reset_index()
+            )
+            data_label = "All GCC · 2022–2023 avg"
+        else:
+            # Single GCC country — use its own rows directly
+            pen_sel = pen[pen["gcc_country"] == gcc_pen_sel]
+            snap = (
+                pen_sel.groupby(["cmdCode", "commodity"])
+                .agg(gcc_exports=("gcc_exports", "sum"), world_demand=("world_demand", "sum"))
+                .reset_index()
+            )
+            data_label = f"{gcc_pen_sel} · 2022–2023 avg"
+
         snap["penetration_pct"] = (
             snap["gcc_exports"] / snap["world_demand"] * 100
         ).clip(0, 100).round(2)
-        data_label = "2022–2023 avg"
     else:
         latest_yr = int(pen["year"].max())
         snap = pen[pen["year"] == latest_yr].copy()
@@ -1155,7 +1171,7 @@ elif page == "GCC Penetration":
     _, col_c, _ = st.columns([0.5, 9, 0.5])
     with col_c:
         st.subheader(f"Sectors Where GCC Has the Strongest Market Presence ({data_label})")
-        st.caption("Top 15 commodity sectors by GCC export share of destination import demand.")
+        st.caption(f"Top 15 commodity sectors by {'combined GCC' if gcc_pen_sel == 'All GCC' else gcc_pen_sel} export share of destination import demand.")
         high = snap.sort_values("penetration_pct", ascending=False).head(15).copy()
         high["label"] = high["cmdCode"].astype(str) + " — " + high["commodity"].str[:50]
         fig2 = hbar(
@@ -1169,7 +1185,7 @@ elif page == "GCC Penetration":
     _, col_c2, _ = st.columns([0.5, 9, 0.5])
     with col_c2:
         st.subheader(f"High-Demand Sectors With Low GCC Penetration — Untapped Opportunities ({data_label})")
-        st.caption("Commodity sectors in the top 50% of global import demand where GCC supplies less than 5% of total imports.")
+        st.caption(f"Commodity sectors in the top 50% of global import demand where {'combined GCC supplies' if gcc_pen_sel == 'All GCC' else gcc_pen_sel + ' supplies'} less than 5% of total imports.")
         gaps = snap[(snap["penetration_pct"] < 5) &
                     (snap["world_demand"] > snap["world_demand"].quantile(0.5))]
         gaps = gaps.sort_values("world_demand", ascending=False).head(15).copy()
