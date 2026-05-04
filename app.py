@@ -1242,14 +1242,14 @@ elif page == "Demand Forecasts":
     pen = files["gcc_export_penetration.csv"]
 
     opp_fc = load_opp()
-        col_gcc_fc, col_spacer = st.columns([1, 2])
+    col_gcc_fc, col_spacer = st.columns([1, 2])
+    
+    with col_gcc_fc:
+        # Simplified to only include the unique countries from the dataframe
+        gcc_options = sorted(opp_fc["gcc_country"].unique().tolist()) if opp_fc is not None else []
         
-        with col_gcc_fc:
-            # Simplified to only include the unique countries from the dataframe
-            gcc_options = sorted(opp_fc["gcc_country"].unique().tolist()) if opp_fc is not None else []
-            
-            # The selectbox will now default to the first country in the sorted list
-            gcc_fc_sel = st.selectbox("Filter by GCC Exporter", gcc_options, key="fc_gcc")
+        # The selectbox will now default to the first country in the sorted list
+        gcc_fc_sel = st.selectbox("Filter by GCC Exporter", gcc_options, key="fc_gcc")
 
     # Always build from the full commodity list in the forecast file
     fc_all = (
