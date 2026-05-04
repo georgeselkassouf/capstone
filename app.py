@@ -430,7 +430,7 @@ if page == "Home":
          "5% market share — the clearest signal of untapped diversification potential."),
         ("#D62828", "📉", "Demand Forecasts",
          "4-year projections (2025–2028)",
-         "Ridge panel regression forecasts per commodity (Holt-Winters fallback for sparse series), filterable by GCC "
+         "Ridge panel regression forecasts per commodity, filterable by GCC "
          "exporter. Includes a projected demand table and a ranking of top forecast opportunities."),
     ]
 
@@ -1235,7 +1235,7 @@ elif page == "GCC Penetration":
 # ═══════════════════════════════════════════════════════════════════════════
 elif page == "Demand Forecasts":
     st.title("4-Year Import Demand Forecasts (2025–2028)")
-    st.markdown("Ridge panel regression forecasts of global import demand per commodity sector (Holt-Winters fallback for sparse series), trained on 2015–2024 historical data with 5 macroeconomic regressors.")
+    st.markdown("Ridge panel regression forecasts of global import demand per commodity sector, trained on 2015–2024 historical data with macroeconomic regressors.")
 
     files = require("demand_forecast_global.csv", "gcc_export_penetration.csv")
     fc = files["demand_forecast_global.csv"]
@@ -1357,12 +1357,12 @@ elif page == "Demand Forecasts":
         margin=dict(t=50, b=30), height=430,
         legend=dict(orientation="h", y=-0.14, x=0),
         shapes=[dict(
-            type="line", x0=2024.5, x1=2024.5,
+            type="line", x0=2025, x1=2025,
             y0=0, y1=1, yref="paper",
             line=dict(color="rgba(0,0,0,0.15)", width=1.5, dash="dot"),
         )],
         annotations=[dict(
-            x=2024.5, y=1, yref="paper",
+            x=2025, y=1, yref="paper",
             text="Forecast →", showarrow=False,
             font=dict(size=11, color="#888"), xanchor="left", xshift=6,
         )] if not f.empty else [],
