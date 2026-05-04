@@ -346,7 +346,7 @@ with st.sidebar:
                      style='height:75px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
                 <div style='width:1px;height:36px;background:rgba(255,255,255,0.15);'></div>
                 <img src='data:image/png;base64,{AUB_LOGO_B64}'
-                     style='height:40px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
+                     style='height:36px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;'/>
             </div>
         </div>
         """,
