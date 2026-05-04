@@ -333,6 +333,7 @@ with st.sidebar:
     st.session_state["nav_page"] = page
 
     st.divider()
+    st.caption("Data: UN Comtrade")
     st.caption("HS27 / HS71 / HS93 / HS99 excluded")
 
     # Logos at bottom of sidebar
@@ -566,7 +567,7 @@ if page == "Home":
         ("📍", "CEPII GeoDist",
          "Capital-to-capital and population-weighted geographic distance matrix."),
         ("🏢", "OCO Global",
-         "Analytical framework, sector prioritization criteria, and strategic scope definition."),
+         "Analytical framework, sector prioritisation criteria, and strategic scope definition."),
     ]
     s1, s2, s3 = st.columns(3)
     src_cols_list = [s1, s2, s3]
@@ -1172,35 +1173,17 @@ elif page == "GCC Penetration":
     pen = require("gcc_export_penetration.csv")
 
     # GCC country filter
-    gcc_options = ["All GCC"] + sorted(pen["gcc_country"].unique().tolist()) if "gcc_country" in pen.columns else ["All GCC"]
+    gcc_options = sorted(pen["gcc_country"].unique().tolist()) if "gcc_country" in pen.columns else []
     gcc_pen_sel = st.selectbox("GCC Exporter", gcc_options, key="pen_gcc_sel")
 
     if "gcc_country" in pen.columns and "dest_country" in pen.columns:
-        if gcc_pen_sel == "All GCC":
-            # Aggregate across all GCC countries — sum exports, take first for world_demand (same per dest×cmd)
-            by_dest = (
-                pen.groupby(["dest_country", "cmdCode", "commodity"])
-                .agg(
-                    gcc_exports=("gcc_exports", "sum"),
-                    world_demand=("world_demand", "first"),
-                )
-                .reset_index()
-            )
-            snap = (
-                by_dest.groupby(["cmdCode", "commodity"])
-                .agg(gcc_exports=("gcc_exports", "sum"), world_demand=("world_demand", "sum"))
-                .reset_index()
-            )
-            data_label = "All GCC · 2022–2023 avg"
-        else:
-            # Single GCC country — use its own rows directly
-            pen_sel = pen[pen["gcc_country"] == gcc_pen_sel]
-            snap = (
-                pen_sel.groupby(["cmdCode", "commodity"])
-                .agg(gcc_exports=("gcc_exports", "sum"), world_demand=("world_demand", "sum"))
-                .reset_index()
-            )
-            data_label = f"{gcc_pen_sel} · 2022–2023 avg"
+        pen_sel = pen[pen["gcc_country"] == gcc_pen_sel]
+        snap = (
+            pen_sel.groupby(["cmdCode", "commodity"])
+            .agg(gcc_exports=("gcc_exports", "sum"), world_demand=("world_demand", "sum"))
+            .reset_index()
+        )
+        data_label = f"{gcc_pen_sel} · 2022–2023 avg"
 
         snap["penetration_pct"] = (
             snap["gcc_exports"] / snap["world_demand"] * 100
@@ -1213,16 +1196,13 @@ elif page == "GCC Penetration":
     _, col_c, _ = st.columns([0.5, 9, 0.5])
     with col_c:
         st.subheader(f"Sectors Where GCC Has the Strongest Market Presence ({data_label})")
-        st.caption(f"Top 15 commodity sectors by {'combined GCC' if gcc_pen_sel == 'All GCC' else gcc_pen_sel} export share of destination import demand." + (" Restricted to sectors in the top 70% of global import demand." if gcc_pen_sel == "All GCC" else ""))
-        if gcc_pen_sel == "All GCC":
-            demand_floor = snap["world_demand"].quantile(0.4)
-            high = (
-                snap[snap["world_demand"] >= demand_floor]
-                .sort_values("penetration_pct", ascending=False)
-                .head(15).copy()
-            )
-        else:
-            high = snap.sort_values("penetration_pct", ascending=False).head(15).copy()
+        st.caption(f"Top 15 commodity sectors by {gcc_pen_sel} export share of destination import demand, restricted to sectors with meaningful import volume.")
+        demand_floor = snap["world_demand"].quantile(0.4)
+        high = (
+            snap[(snap["world_demand"] >= demand_floor) & (snap["penetration_pct"] < 90)]
+            .sort_values("penetration_pct", ascending=False)
+            .head(15).copy()
+        )
         high["label"] = high["cmdCode"].astype(str) + " — " + high["commodity"].str[:50]
         fig2 = hbar(
             high["label"], high["penetration_pct"], colorscale=PURPLE_SCALE,
@@ -1235,7 +1215,7 @@ elif page == "GCC Penetration":
     _, col_c2, _ = st.columns([0.5, 9, 0.5])
     with col_c2:
         st.subheader(f"High-Demand Sectors With Low GCC Penetration — Untapped Opportunities ({data_label})")
-        st.caption(f"Commodity sectors in the top 50% of global import demand where {'combined GCC supplies' if gcc_pen_sel == 'All GCC' else gcc_pen_sel + ' supplies'} less than 5% of total imports.")
+        st.caption(f"Commodity sectors in the top 50% of global import demand where {gcc_pen_sel} supplies less than 5% of total imports.")
         gaps = snap[(snap["penetration_pct"] < 5) &
                     (snap["world_demand"] > snap["world_demand"].quantile(0.5))]
         gaps = gaps.sort_values("world_demand", ascending=False).head(15).copy()
@@ -1349,6 +1329,12 @@ elif page == "Demand Forecasts":
     x_min = min(all_years) - 0.5 if all_years else 2015
     x_max = max(all_years) + 0.5 if all_years else 2028
 
+    # Build explicit tick list covering all years in the chart
+    all_tick_years = list(range(
+        min(all_years) if all_years else 2015,
+        (max(all_years) if all_years else 2028) + 1
+    ))
+
     fig.update_layout(
         **CHART_LAYOUT,
         title=dict(
@@ -1359,7 +1345,9 @@ elif page == "Demand Forecasts":
                    tickformat="$.3s"),
         xaxis=dict(
             title="", gridcolor="rgba(0,0,0,0.05)",
-            tickmode="linear", dtick=1, tickformat="d",
+            tickmode="array",
+            tickvals=all_tick_years,
+            ticktext=[str(y) for y in all_tick_years],
             range=[x_min, x_max],
         ),
         margin=dict(t=50, b=30), height=430,
@@ -1381,13 +1369,6 @@ elif page == "Demand Forecasts":
         st.info("ℹ️ Historical data not available. Add `demand_history_global.csv` from the notebook to show the full 2015–2028 chart.")
         if not f.empty:
             st.plotly_chart(fig, use_container_width=True)
-
-    if not f.empty:
-        st.subheader(f"Projected Annual Import Demand — {cname} (2025–2028)")
-        tbl = f[["year", "demand_ensemble"]].copy()
-        tbl.columns = ["Year", "Forecast"]
-        tbl["Forecast"] = tbl["Forecast"].apply(fmt_usd)
-        st.dataframe(tbl, use_container_width=True, hide_index=True)
 
     st.divider()
     st.subheader(
