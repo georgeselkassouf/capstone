@@ -1306,15 +1306,7 @@ elif page == "Demand Forecasts":
         ))
 
     if not f.empty:
-        # Bridge: connect last historical point to first forecast point
-        if not h.empty:
-            bridge = pd.DataFrame({
-                "year": [int(h["year"].max())],
-                "demand_ensemble": [float(h.loc[h["year"] == h["year"].max(), "world_demand"].iloc[0])]
-            })
-            f_plot = pd.concat([bridge, f[["year", "demand_ensemble"]].assign(year=lambda x: x["year"].astype(int))], ignore_index=True)
-        else:
-            f_plot = f[["year", "demand_ensemble"]].assign(year=lambda x: x["year"].astype(int))
+        f_plot = f[["year", "demand_ensemble"]].assign(year=lambda x: x["year"].astype(int))
 
         fig.add_trace(go.Scatter(
             x=f_plot["year"], y=f_plot["demand_ensemble"],
