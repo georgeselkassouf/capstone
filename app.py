@@ -893,8 +893,8 @@ elif page == "Executive Summary":
     )
 
     st.divider()
-    st.subheader("Average Opportunity Score Heatmap — GCC Exporters × Top Destination Markets")
-    st.caption("Each cell shows the average composite opportunity score across all non-fuel commodities for that GCC exporter–destination pair. Higher values indicate destinations that are broadly attractive across the full export basket, not just for a single product. Darker = stronger overall opportunity.")
+    st.subheader("Opportunity Score Heatmap — GCC Exporters × Top Destination Markets")
+    st.caption("Each cell shows the highest composite opportunity score for that GCC country × destination pair, across all commodities. Darker = stronger opportunity.")
 
     gcc_countries = sorted(opp["gcc_country"].unique().tolist())
 
@@ -904,11 +904,11 @@ elif page == "Executive Summary":
         .mean().nlargest(10).index.tolist()
     )
 
-    # Average score per GCC × destination (across all commodities)
+    # Best score per GCC × destination (across all commodities)
     heat_df = (
         opp[opp["dest_country"].isin(top_dests)]
         .groupby(["gcc_country", "dest_country"])["opportunity_score"]
-        .mean().reset_index()
+        .max().reset_index()
     )
     pivot = heat_df.pivot(index="gcc_country", columns="dest_country", values="opportunity_score")
     pivot = pivot.reindex(index=gcc_countries, columns=top_dests)
@@ -943,7 +943,7 @@ elif page == "Executive Summary":
         text=[[f"{v:.3f}" if not np.isnan(v) else "—" for v in row] for row in pivot.values],
         texttemplate="%{text}",
         textfont=dict(size=11),
-        hovertemplate="<b>%{y}</b> → <b>%{x}</b><br>Avg. Score: %{z:.3f}<extra></extra>",
+        hovertemplate="<b>%{y}</b> → <b>%{x}</b><br>Best Score: %{z:.3f}<extra></extra>",
         colorbar=dict(
             title=dict(text="Score", font=dict(size=12)),
             thickness=14, len=0.8,
