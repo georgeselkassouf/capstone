@@ -893,8 +893,8 @@ elif page == "Executive Summary":
     )
 
     st.divider()
-    st.subheader("Opportunity Score Heatmap — GCC Exporters × Top Destination Markets")
-    st.caption("Each cell shows the highest composite opportunity score for that GCC country × destination pair, across all commodities. Darker = stronger opportunity.")
+    st.subheader("Best Opportunity Score by GCC Exporter × Destination Market")
+    st.caption("Each cell shows the peak composite opportunity score across all non-fuel commodities for that exporter–destination pair — i.e. the single best product opportunity available. To identify which commodity drives a specific score, use the Opportunity Finder page.")
 
     gcc_countries = sorted(opp["gcc_country"].unique().tolist())
 
