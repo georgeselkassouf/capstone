@@ -434,28 +434,29 @@ if page == "Home":
          "exporter. Includes a projected demand table and a ranking of top forecast opportunities."),
     ]
 
-    col_a, col_b = st.columns(2)
-    for i, (color, icon, title, subtitle, desc) in enumerate(modules):
-        target_col = col_a if i % 2 == 0 else col_b
-        with target_col:
-            st.markdown(
-                f"<div style='background:#ffffff;border:1px solid #e4eaf2;border-radius:12px;"
-                f"padding:1.4rem 1.6rem;margin-bottom:0.4rem;"
-                f"border-left:4px solid {color};'>"
-                f"<div style='display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;'>"
-                f"<span style='font-size:1.4rem;'>{icon}</span>"
-                f"<div>"
-                f"<div style='font-size:0.95rem;font-weight:700;color:#0f2847;'>{title}</div>"
-                f"<div style='font-size:0.72rem;font-weight:600;color:{color};text-transform:uppercase;"
-                f"letter-spacing:0.08em;'>{subtitle}</div>"
-                f"</div></div>"
-                f"<div style='font-size:0.85rem;color:#4a5568;line-height:1.6;margin-bottom:0.8rem;'>{desc}</div>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-            if st.button(f"Open {title} →", key=f"nav_{title}", use_container_width=True):
-                st.session_state["nav_page"] = title
-                st.rerun()
+    for row_start in range(0, len(modules), 2):
+        row_modules = modules[row_start:row_start + 2]
+        cols = st.columns(2)
+        for col, (color, icon, title, subtitle, desc) in zip(cols, row_modules):
+            with col:
+                st.markdown(
+                    f"<div style='background:#ffffff;border:1px solid #e4eaf2;border-radius:12px;"
+                    f"padding:1.4rem 1.6rem;margin-bottom:0.4rem;"
+                    f"border-left:4px solid {color};'>"
+                    f"<div style='display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;'>"
+                    f"<span style='font-size:1.4rem;'>{icon}</span>"
+                    f"<div>"
+                    f"<div style='font-size:0.95rem;font-weight:700;color:#0f2847;'>{title}</div>"
+                    f"<div style='font-size:0.72rem;font-weight:600;color:{color};text-transform:uppercase;"
+                    f"letter-spacing:0.08em;'>{subtitle}</div>"
+                    f"</div></div>"
+                    f"<div style='font-size:0.85rem;color:#4a5568;line-height:1.6;margin-bottom:0.8rem;min-height:5rem;'>{desc}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+                if st.button(f"Open {title} →", key=f"nav_{title}", use_container_width=True):
+                    st.session_state["nav_page"] = title
+                    st.rerun()
 
     st.divider()
 
