@@ -1308,6 +1308,18 @@ elif page == "Demand Forecasts":
     if not f.empty:
         f_plot = f[["year", "demand_ensemble"]].assign(year=lambda x: x["year"].astype(int))
 
+        # Silent connector: draws the dashed line from 2024→2025 with no hover/legend entry
+        if not h.empty:
+            conn_x = [int(h["year"].max()), int(f_plot["year"].iloc[0])]
+            conn_y = [float(h.loc[h["year"] == h["year"].max(), "world_demand"].iloc[0]),
+                      float(f_plot["demand_ensemble"].iloc[0])]
+            fig.add_trace(go.Scatter(
+                x=conn_x, y=conn_y,
+                mode="lines", showlegend=False,
+                line=dict(color="#D62828", width=2.5, dash="dash"),
+                hoverinfo="skip",
+            ))
+
         fig.add_trace(go.Scatter(
             x=f_plot["year"], y=f_plot["demand_ensemble"],
             mode="lines+markers", name="Forecast (2025–2028)",
