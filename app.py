@@ -434,29 +434,28 @@ if page == "Home":
          "exporter. Includes a projected demand table and a ranking of top forecast opportunities."),
     ]
 
-    for row_start in range(0, len(modules), 2):
-        row_modules = modules[row_start:row_start + 2]
-        cols = st.columns(2)
-        for col, (color, icon, title, subtitle, desc) in zip(cols, row_modules):
-            with col:
-                st.markdown(
-                    f"<div style='background:#ffffff;border:1px solid #e4eaf2;border-radius:12px;"
-                    f"padding:1.4rem 1.6rem;margin-bottom:0.4rem;"
-                    f"border-left:4px solid {color};'>"
-                    f"<div style='display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;'>"
-                    f"<span style='font-size:1.4rem;'>{icon}</span>"
-                    f"<div>"
-                    f"<div style='font-size:0.95rem;font-weight:700;color:#0f2847;'>{title}</div>"
-                    f"<div style='font-size:0.72rem;font-weight:600;color:{color};text-transform:uppercase;"
-                    f"letter-spacing:0.08em;'>{subtitle}</div>"
-                    f"</div></div>"
-                    f"<div style='font-size:0.85rem;color:#4a5568;line-height:1.6;margin-bottom:0.8rem;min-height:5rem;'>{desc}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-                if st.button(f"Open {title} →", key=f"nav_{title}", use_container_width=True):
-                    st.session_state["nav_page"] = title
-                    st.rerun()
+    col_a, col_b = st.columns(2)
+    for i, (color, icon, title, subtitle, desc) in enumerate(modules):
+        target_col = col_a if i % 2 == 0 else col_b
+        with target_col:
+            st.markdown(
+                f"<div style='background:#ffffff;border:1px solid #e4eaf2;border-radius:12px;"
+                f"padding:1.4rem 1.6rem;margin-bottom:0.4rem;"
+                f"border-left:4px solid {color};'>"
+                f"<div style='display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;'>"
+                f"<span style='font-size:1.4rem;'>{icon}</span>"
+                f"<div>"
+                f"<div style='font-size:0.95rem;font-weight:700;color:#0f2847;'>{title}</div>"
+                f"<div style='font-size:0.72rem;font-weight:600;color:{color};text-transform:uppercase;"
+                f"letter-spacing:0.08em;'>{subtitle}</div>"
+                f"</div></div>"
+                f"<div style='font-size:0.85rem;color:#4a5568;line-height:1.6;margin-bottom:0.8rem;'>{desc}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            if st.button(f"Open {title} →", key=f"nav_{title}", use_container_width=True):
+                st.session_state["nav_page"] = title
+                st.rerun()
 
     st.divider()
 
@@ -483,7 +482,7 @@ if page == "Home":
                 padding:0.7rem 1.1rem;text-align:center;min-width:110px;'>
       <div style='font-size:1.2rem;margin-bottom:0.2rem;'>🤖</div>
       <div style='font-size:0.78rem;font-weight:700;color:#0f2847;'>ML Classifier</div>
-      <div style='font-size:0.68rem;color:#8a9ab0;'>RF + XGBoost</div>
+      <div style='font-size:0.68rem;color:#8a9ab0;'>XGBoost</div>
     </div>
     <div style='color:#b0baca;font-size:1.4rem;padding:0 0.5rem;'>→</div>
     <div style='background:#ffffff;border:1px solid #dde3ee;border-radius:8px;
@@ -523,7 +522,7 @@ if page == "Home":
         ("#FF6B35", "🚢", "Landing Cost Index", "15",
          "Blends inverted MFN tariff rate (50%) and World Bank LPI (50%). Lower cost, better logistics = higher score."),
         ("#D62828", "🤖", "ML Growth Signal",   "10",
-         "Ensemble probability from Random Forest + XGBoost predicting above-median structural export growth."),
+         "XGBoost probability predicting above-median structural export growth."),
         ("#0a7a4e", "💰", "Price Quality",       "10",
          "Weighted blend of GCC unit export value level (70%) and its CAGR (30%). Rewards premium-priced exports."),
     ]
@@ -783,7 +782,7 @@ elif page == "Opportunity Finder":
 <b>Score</b> — composite opportunity score (0–1, higher = more attractive). &nbsp;·&nbsp;
 <b>Grade</b> — country viability tier (A+/A/B/C/D) based on World Bank governance &amp; economic indicators. &nbsp;·&nbsp;
 <b>4Y Demand</b> — total forecasted import demand for this commodity in that market over 2025–2028. &nbsp;·&nbsp;
-<b>ML Growth Probability</b> — ensemble probability (RF + XGBoost) that this market will show above-median structural export growth. &nbsp;·&nbsp;
+<b>ML Growth Probability</b> — XGBoost probability that this market will show above-median structural export growth. &nbsp;·&nbsp;
 <b>LPI</b> — World Bank Logistics Performance Index (1–5); higher = easier to ship to. &nbsp;·&nbsp;
 <b>Tariff %</b> — MFN applied tariff rate faced by GCC exporters; lower = cheaper market entry. &nbsp;·&nbsp;
 <b>Distance (km)</b> — haversine distance from GCC exporter to destination, weighted by commodity type sensitivity. &nbsp;·&nbsp;
@@ -893,8 +892,8 @@ elif page == "Executive Summary":
     )
 
     st.divider()
-    st.subheader("Best Opportunity Score by GCC Exporter × Destination Market")
-    st.caption("Each cell shows the peak composite opportunity score across all non-fuel commodities for that exporter–destination pair — i.e. the single best product opportunity available. To identify which commodity drives a specific score, use the Opportunity Finder page.")
+    st.subheader("Opportunity Score Heatmap — GCC Exporters × Top Destination Markets")
+    st.caption("Each cell shows the highest composite opportunity score for that GCC country × destination pair, across all commodities. Darker = stronger opportunity.")
 
     gcc_countries = sorted(opp["gcc_country"].unique().tolist())
 
