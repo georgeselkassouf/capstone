@@ -1197,9 +1197,8 @@ elif page == "GCC Penetration":
     with col_c:
         st.subheader(f"Sectors Where GCC Has the Strongest Market Presence ({data_label})")
         st.caption(f"Top 15 commodity sectors by {gcc_pen_sel} export share of destination import demand, restricted to sectors with meaningful import volume.")
-        demand_floor = snap["world_demand"].quantile(0.4)
         high = (
-            snap[(snap["world_demand"] >= demand_floor) & (snap["penetration_pct"] < 90)]
+            snap[snap["penetration_pct"] < 90]
             .sort_values("penetration_pct", ascending=False)
             .head(15).copy()
         )
@@ -1316,7 +1315,7 @@ elif page == "Demand Forecasts":
             fig.add_trace(go.Scatter(
                 x=conn_x, y=conn_y,
                 mode="lines", showlegend=False,
-                line=dict(color="#D62828", width=2.5, dash="dash"),
+                line=dict(color="#0F4C75", width=2.5),
                 hoverinfo="skip",
             ))
 
