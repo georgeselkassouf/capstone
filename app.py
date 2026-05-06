@@ -636,19 +636,8 @@ elif page == "Opportunity Finder":
         .max().reset_index()
     )
 
-    # Sort by gcc_exports from pen_scored (the exports KPI) descending
-    pen_data_sort = load("gcc_export_penetration.csv")
-    if pen_data_sort is not None and "gcc_exports" in pen_data_sort.columns:
-        exports_by_cmd = (
-            pen_data_sort[pen_data_sort["gcc_country"] == gcc_sel]
-            .groupby("cmdCode")["gcc_exports"].sum().reset_index()
-            .rename(columns={"gcc_exports": "_exp_val"})
-        )
-        cmd_scores = cmd_scores.merge(exports_by_cmd, on="cmdCode", how="left")
-        cmd_scores["_exp_val"] = cmd_scores["_exp_val"].fillna(0)
-        cmd_scores = cmd_scores.sort_values("_exp_val", ascending=False).drop(columns=["_exp_val"])
-    else:
-        cmd_scores = cmd_scores.sort_values("opportunity_score", ascending=False)
+    # Sort by highest opportunity score descending
+    cmd_scores = cmd_scores.sort_values("opportunity_score", ascending=False)
     cmd_labels = cmd_scores.apply(
         lambda r: f"{r['cmdCode']} — {r['commodity'][:55]}", axis=1
     ).tolist()
